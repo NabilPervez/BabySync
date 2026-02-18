@@ -3,12 +3,11 @@
 import { useState, useEffect } from "react"
 import { BottomNav } from "@/components/BottomNav"
 import { SleepDurationChart } from "@/components/trends/SleepDurationChart"
+import { SleepTimesChart } from "@/components/trends/SleepTimesChart"
 import { DailyIntakeChart } from "@/components/trends/DailyIntakeChart"
+import { MealTimesChart } from "@/components/trends/MealTimesChart"
 import { DiaperStats } from "@/components/trends/DiaperStats"
-
-// Import logic hooks or just fetch data directly
-// Since we have fake-data.json, let's fetch it for now to hydrate the charts
-// In a real app we'd query Dexie with complex aggregations or a specialized hook
+import { DiaperTimelineChart } from "@/components/trends/DiaperTimelineChart"
 
 export default function TrendsPage() {
     const [data, setData] = useState<any[]>([])
@@ -38,8 +37,13 @@ export default function TrendsPage() {
                 {/* Content */}
                 <main className="flex-1 overflow-y-auto flex flex-col gap-6 px-4 py-6 pb-24 relative z-10 no-scrollbar">
                     <SleepDurationChart data={data} period={period} />
+                    <SleepTimesChart data={data} period={period} />
+
                     <DailyIntakeChart data={data} period={period} />
+                    <MealTimesChart data={data} period={period} />
+
                     <DiaperStats data={data} />
+                    <DiaperTimelineChart data={data} period={period} />
                 </main>
 
                 <BottomNav />
