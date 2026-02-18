@@ -20,7 +20,7 @@ import { Label } from "@/components/ui/label"
 import { useTheme } from "next-themes"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 
-export function SettingsDrawer() {
+export function SettingsDrawer({ trigger }: { trigger?: React.ReactNode }) {
     const [open, setOpen] = useState(false)
     const { theme, setTheme } = useTheme()
 
@@ -76,9 +76,13 @@ export function SettingsDrawer() {
     return (
         <Drawer open={open} onOpenChange={setOpen}>
             <DrawerTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full">
-                    <Settings className="w-5 h-5 text-muted-foreground" />
-                </Button>
+                {trigger ? (
+                    <button>{trigger}</button> // Wrap in button if needed for asChild props behavior
+                ) : (
+                    <Button variant="ghost" size="icon" className="rounded-full">
+                        <Settings className="w-5 h-5 text-muted-foreground" />
+                    </Button>
+                )}
             </DrawerTrigger>
             <DrawerContent>
                 <div className="mx-auto w-full max-w-sm">

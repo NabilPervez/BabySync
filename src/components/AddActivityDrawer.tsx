@@ -1,4 +1,10 @@
 "use client"
+// We'll rename the existing AddActivityDrawer to keep it, but we need to integrate the FAB button into page.tsx directly
+// Actually, AddActivityDrawer exports a component that renders the trigger button.
+// The user's HTML shows a specific FAB button design:
+/* <button class="flex items-center justify-center w-14 h-14 rounded-full bg-primary text-white shadow-[0_8px_30px_rgba(96,165,250,0.4)] hover:scale-105 active:scale-95 transition-all border-2 border-white dark:border-surface-dark">
+   <span class="material-symbols-outlined text-[32px]">add</span>
+   </button> */
 
 import { useState } from "react"
 import { Plus, Milk, Droplet } from "lucide-react"
@@ -26,8 +32,6 @@ export function AddActivityDrawer() {
     const handleSave = async (data: any) => {
         try {
             if (data.type === 'DIAPER' && !data.subtype) {
-                // Validation for diaper subtype needed?
-                // Let's assume default 'wet' if not set, or handle in form
             }
 
             await db.logs.add({
@@ -44,9 +48,9 @@ export function AddActivityDrawer() {
     return (
         <Drawer open={open} onOpenChange={setOpen}>
             <DrawerTrigger asChild>
-                <Button size="icon" className="h-14 w-14 rounded-full shadow-xl bg-primary hover:bg-primary/90 fixed bottom-6 right-6 z-50">
-                    <Plus className="h-6 w-6 text-primary-foreground" />
-                </Button>
+                <button className="flex items-center justify-center w-14 h-14 rounded-full bg-primary text-white shadow-[0_8px_30px_rgba(96,165,250,0.4)] hover:scale-105 active:scale-95 transition-all border-2 border-white dark:border-surface-dark">
+                    <span className="material-symbols-outlined text-[32px]">add</span>
+                </button>
             </DrawerTrigger>
             <DrawerContent>
                 <div className="mx-auto w-full max-w-sm">
@@ -77,7 +81,7 @@ export function AddActivityDrawer() {
 }
 
 function FeedForm({ onSave }: { onSave: (data: any) => void }) {
-    const { register, handleSubmit, setValue, watch } = useForm({
+    const { register, handleSubmit, setValue, watch, reset } = useForm({
         defaultValues: { type: 'bottle', amount: '', notes: '' }
     })
     const feedType = watch('type')
@@ -88,6 +92,7 @@ function FeedForm({ onSave }: { onSave: (data: any) => void }) {
             subtype: data.type,
             details: { amount: data.amount, unit: 'oz', notes: data.notes }
         })
+        reset()
     }
 
     return (
@@ -127,7 +132,7 @@ function FeedForm({ onSave }: { onSave: (data: any) => void }) {
 }
 
 function DiaperForm({ onSave }: { onSave: (data: any) => void }) {
-    const { register, handleSubmit, setValue, watch } = useForm({
+    const { register, handleSubmit, setValue, watch, reset } = useForm({
         defaultValues: { type: 'wet', notes: '' }
     })
     const diaperType = watch('type')
@@ -138,6 +143,7 @@ function DiaperForm({ onSave }: { onSave: (data: any) => void }) {
             subtype: data.type, // 'wet' | 'dirty' | 'mixed'
             details: { notes: data.notes }
         })
+        reset()
     }
 
     return (
