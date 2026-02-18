@@ -3,9 +3,8 @@ import { useLiveQuery } from "dexie-react-hooks"
 import { db } from "@/lib/db"
 import { format, formatDistanceStrict } from "date-fns"
 
-export function Timeline() {
+export function Timeline({ onEdit }: { onEdit: (log: any) => void }) {
     const logs = useLiveQuery(() => db.logs.orderBy("startTime").reverse().limit(50).toArray())
-    //   const logs = useLiveQuery(() => db.logs.toArray()) // Temp debug: get all logs to verify
 
     if (!logs) return <div className="text-center p-4 text-muted-foreground animate-pulse">Loading history...</div>
     if (logs.length === 0) return <div className="text-center p-8 text-muted-foreground">No events yet. Start by logging something!</div>
@@ -31,7 +30,7 @@ export function Timeline() {
                             {renderIcon(log)}
                         </div>
 
-                        {/* Content Card */}
+                        {/* Content Card with onClick trigger */}
                         <div className={`flex-1 bg-white dark:bg-surface-dark rounded-xl p-3 shadow-sm ring-1 ring-slate-900/5 dark:ring-white/5 
                 ${log.type === 'SLEEP' ? 'opacity-90' : ''}`}
                         >
@@ -39,7 +38,12 @@ export function Timeline() {
                                 <h3 className="font-semibold text-slate-800 dark:text-blue-50 capitalize">
                                     {getLogTitle(log)}
                                 </h3>
-                                <span className="material-symbols-outlined text-slate-300 dark:text-slate-600 text-sm">more_horiz</span>
+                                <button
+                                    onClick={() => onEdit(log)}
+                                    className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                                >
+                                    <span className="material-symbols-outlined text-slate-300 dark:text-slate-600 text-sm">more_horiz</span>
+                                </button>
                             </div>
                             {renderDetails(log)}
                         </div>

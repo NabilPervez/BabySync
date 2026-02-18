@@ -1,14 +1,28 @@
 "use client"
+import { useState } from "react"
 import { LiveStateCard } from "@/components/LiveStateCard"
 import { Timeline } from "@/components/Timeline"
 import { AddActivityDrawer } from "@/components/AddActivityDrawer"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { SettingsDrawer } from "@/components/SettingsDrawer"
 import { BottomNav } from "@/components/BottomNav"
 import { format } from "date-fns"
 
 export default function Home() {
-  const today = format(new Date(), "EEEE, MMM d") // e.g., "Monday, Oct 24"
+  const today = format(new Date(), "EEEE, MMM d")
+
+  // State for controlling the drawer
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [editingLog, setEditingLog] = useState<any>(null)
+
+  const handleOpenDrawer = () => {
+    setEditingLog(null) // Clear editing state for new entry
+    setDrawerOpen(true)
+  }
+
+  const handleEditLog = (log: any) => {
+    setEditingLog(log)
+    setDrawerOpen(true)
+  }
 
   return (
     <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white min-h-screen flex flex-col overflow-hidden relative font-[var(--font-display)]">
@@ -38,13 +52,29 @@ export default function Home() {
         </div>
 
         <div className="relative">
-          <Timeline />
+          <Timeline onEdit={handleEditLog} />
         </div>
       </main>
 
       {/* FAB - Add Activity */}
       <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-30">
-        <AddActivityDrawer />
+        {/* We pass trigger null here because we are controlling it via state/FAB click, 
+              but actually AddActivityDrawer expects us to render the trigger or use controlled state.
+              Since we want the FAB to open it, we can put the FAB inside a customized trigger OR 
+              just use the open prop.
+          */}
+        <button
+          onClick={handleOpenDrawer}
+          className="flex items-center justify-center w-14 h-14 rounded-full bg-primary text-white shadow-[0_8px_30px_rgba(96,165,250,0.4)] hover:scale-105 active:scale-95 transition-all border-2 border-white dark:border-surface-dark"
+        >
+          <span className="material-symbols-outlined text-[32px]">add</span>
+        </button>
+
+        <AddActivityDrawer
+          open={drawerOpen}
+          onOpenChange={setDrawerOpen}
+          defaultValues={editingLog}
+        />
       </div>
 
       {/* Bottom Nav */}

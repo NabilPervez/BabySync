@@ -94,11 +94,7 @@ export function LiveStateCard() {
                         </span>
                         {isSleeping ? 'Wake Up' : 'Start Sleep'}
                     </button>
-
-                    {/* Edit button placeholder - active logging correction if needed */}
-                    <button className="h-12 w-12 flex items-center justify-center rounded-xl bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-blue-100 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors">
-                        <span className="material-symbols-outlined">edit</span>
-                    </button>
+                    {/* Pencil removed */}
                 </div>
             </div>
         </div>
