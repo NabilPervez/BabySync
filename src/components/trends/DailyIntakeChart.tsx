@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { Area, AreaChart, ResponsiveContainer, Defs, LinearGradient, Stop } from "recharts"
+import { Area, AreaChart, ResponsiveContainer, Tooltip } from "recharts"
 import { format } from "date-fns"
 
 interface DailyIntakeChartProps {
@@ -61,6 +61,10 @@ export function DailyIntakeChart({ data, period }: DailyIntakeChartProps) {
                                 <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0} />
                             </linearGradient>
                         </defs>
+                        <Tooltip
+                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                            cursor={{ stroke: 'var(--color-primary)', strokeWidth: 1 }}
+                        />
                         <Area
                             type="monotone"
                             dataKey="amount"
