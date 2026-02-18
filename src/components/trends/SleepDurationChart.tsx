@@ -70,7 +70,7 @@ export function SleepDurationChart({ data, period }: SleepDurationChartProps) {
                         <span className="text-xs text-slate-500 dark:text-slate-400">Night</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-secondary"></span>
+                        <span className="w-2 h-2 rounded-full bg-purple-800"></span>
                         <span className="text-xs text-slate-500 dark:text-slate-400">Day</span>
                     </div>
                 </div>
@@ -92,7 +92,7 @@ export function SleepDurationChart({ data, period }: SleepDurationChartProps) {
                             cursor={{ fill: 'transparent' }}
                             contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                         />
-                        <Bar dataKey="day" stackId="a" fill="var(--color-secondary)" radius={[0, 0, 4, 4]} />
+                        <Bar dataKey="day" stackId="a" fill="#6b21a8" radius={[0, 0, 4, 4]} />
                         <Bar dataKey="night" stackId="a" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
                     </BarChart>
                 </ResponsiveContainer>

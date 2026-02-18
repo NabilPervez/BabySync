@@ -3,8 +3,8 @@ import { useState } from "react"
 import { LiveStateCard } from "@/components/LiveStateCard"
 import { Timeline } from "@/components/Timeline"
 import { AddActivityDrawer } from "@/components/AddActivityDrawer"
-import { SettingsDrawer } from "@/components/SettingsDrawer"
 import { BottomNav } from "@/components/BottomNav"
+import { LastActivityStats } from "@/components/LastActivityStats"
 import { format } from "date-fns"
 
 export default function Home() {
@@ -37,17 +37,15 @@ export default function Home() {
           <h1 className="text-xl font-bold tracking-tight text-slate-800 dark:text-blue-50">BabySync</h1>
           <span className="text-xs font-medium text-slate-500 dark:text-slate-400 capitalize">{today}</span>
         </div>
-
-        <SettingsDrawer trigger={
-          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 dark:bg-slate-800 text-slate-600 dark:text-blue-100 hover:bg-blue-200 dark:hover:bg-slate-700 transition-colors">
-            <span className="material-symbols-outlined">settings</span>
-          </div>
-        } />
       </header>
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto no-scrollbar pb-24 px-5 relative z-10">
-        <div className="mt-4 mb-8">
+        <div className="mt-4">
+          <LastActivityStats />
+        </div>
+
+        <div className="mb-8">
           <LiveStateCard />
         </div>
 
