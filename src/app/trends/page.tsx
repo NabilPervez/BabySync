@@ -21,8 +21,8 @@ export default function TrendsPage() {
     }, [])
 
     return (
-        <div className="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-white antialiased selection:bg-primary/30 min-h-screen">
-            <div className="relative flex h-full min-h-screen w-full flex-col overflow-x-hidden max-w-md mx-auto shadow-2xl bg-background-light dark:bg-background-dark">
+        <div className="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-white antialiased selection:bg-primary/30 h-full w-full">
+            <div className="relative flex h-full w-full flex-col overflow-hidden max-w-md mx-auto shadow-2xl bg-background-light dark:bg-background-dark">
                 {/* Header */}
                 <header className="sticky top-0 z-20 flex items-center justify-between px-5 pt-12 pb-4 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md border-b border-blue-100 dark:border-white/5 safe-top">
                     <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Trends</h1>

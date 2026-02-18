@@ -37,7 +37,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
       </head>
-      <body className="antialiased bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-[var(--font-display)] min-h-screen flex flex-col overflow-hidden relative">
+      <body className="antialiased bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-[var(--font-display)] h-[100dvh] w-screen flex flex-col overflow-hidden relative">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

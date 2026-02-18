@@ -25,7 +25,7 @@ export default function Home() {
   }
 
   return (
-    <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white min-h-screen flex flex-col overflow-hidden relative font-[var(--font-display)]">
+    <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white h-full w-full flex flex-col overflow-hidden relative font-[var(--font-display)]">
 
       {/* Background Gradients */}
       <div className="fixed top-0 left-0 right-0 h-32 bg-gradient-to-b from-background-light dark:from-background-dark to-transparent pointer-events-none z-10"></div>
