@@ -3,8 +3,18 @@ import { useLiveQuery } from "dexie-react-hooks"
 import { db } from "@/lib/db"
 import { format, formatDistanceStrict } from "date-fns"
 
-export function Timeline({ onEdit }: { onEdit: (log: any) => void }) {
-    const logs = useLiveQuery(() => db.logs.orderBy("startTime").reverse().limit(50).toArray())
+import { startOfDay, endOfDay } from "date-fns"
+
+export function Timeline({ onEdit, date }: { onEdit: (log: any) => void, date?: Date }) {
+    const logs = useLiveQuery(() => {
+        let collection = db.logs.orderBy("startTime").reverse()
+        if (date) {
+            const start = startOfDay(date).getTime()
+            const end = endOfDay(date).getTime()
+            return collection.filter(log => log.startTime >= start && log.startTime <= end).toArray()
+        }
+        return collection.limit(50).toArray()
+    }, [date])
 
     if (!logs) return <div className="text-center p-4 text-muted-foreground animate-pulse">Loading history...</div>
     if (logs.length === 0) return <div className="text-center p-8 text-muted-foreground">No events yet. Start by logging something!</div>
@@ -60,7 +70,17 @@ function getLogTitle(log: any) {
         return log.endTime ? 'Woke Up' : 'Started Sleep'
     }
     if (log.type === 'FEED') {
-        return log.subtype === 'bottle' ? 'Formula/Bottle' : 'Nursing'
+        if (log.subtype === 'bottle') return 'Formula/Bottle'
+        if (log.subtype === 'breast') return 'Nursing'
+        if (log.subtype === 'puree') return 'Puree (Solid)'
+        if (log.subtype === 'whole') return 'Whole (Solid)'
+        return 'Feeding'
+    }
+    if (log.type === 'ACTIVITY') {
+        if (log.subtype === 'play_inside') return 'Playing Inside'
+        if (log.subtype === 'play_outside') return 'Playing Outside'
+        if (log.subtype === 'bath') return 'Bath Time'
+        return 'Activity'
     }
     return `${log.subtype || ''} ${log.type.toLowerCase()}`
 }
@@ -83,7 +103,7 @@ function renderIcon(log: any) {
             hoverText = 'group-hover:text-accent-lavender'
             break
         case 'FEED':
-            iconName = 'grocery' // 'restaurant' or 'baby_bottle' if available
+            iconName = (log.subtype === 'puree' || log.subtype === 'whole') ? 'restaurant' : 'grocery' // 'restaurant' or 'baby_bottle' if available
             bgClass = 'bg-yellow-50 dark:bg-slate-800'
             textClass = 'text-amber-300'
             borderClass = 'border-yellow-100 dark:border-slate-700'
@@ -92,19 +112,31 @@ function renderIcon(log: any) {
             break
         case 'DIAPER':
             iconName = 'water_drop'
-            if (log.subtype === 'dirty') iconName = 'pest_control_rodent' // visual pun? or stick to generic
+            if (log.subtype === 'poop' || log.subtype === 'both') iconName = 'pest_control_rodent' // visual pun? or stick to generic
 
             bgClass = 'bg-blue-50 dark:bg-slate-800'
             textClass = 'text-blue-400'
             borderClass = 'border-blue-100 dark:border-slate-700'
 
-            if (log.subtype === 'dirty') {
+            if (log.subtype === 'poop' || log.subtype === 'both') {
                 bgClass = 'bg-rose-50 dark:bg-slate-800'
                 textClass = 'text-rose-300'
                 borderClass = 'border-rose-100 dark:border-slate-700'
                 hoverBorder = 'group-hover:border-accent-rose'
                 hoverText = 'group-hover:text-accent-rose'
             }
+            break
+        case 'ACTIVITY':
+            if (log.subtype === 'play_inside') iconName = 'toys'
+            else if (log.subtype === 'play_outside') iconName = 'park'
+            else if (log.subtype === 'bath') iconName = 'bathtub'
+            else iconName = 'sports_esports'
+
+            bgClass = 'bg-emerald-50 dark:bg-slate-800'
+            textClass = 'text-emerald-500'
+            borderClass = 'border-emerald-100 dark:border-slate-700'
+            hoverBorder = 'group-hover:border-emerald-400'
+            hoverText = 'group-hover:text-emerald-400'
             break
     }
 
@@ -139,10 +171,10 @@ function renderDetails(log: any) {
             </div>
         )
     }
-    if (log.type === 'DIAPER') {
+    if (log.type === 'DIAPER' || log.type === 'ACTIVITY') {
         return (
             <p className="text-sm text-slate-500 dark:text-slate-400 capitalize">
-                {log.details?.notes || log.subtype || 'Logged'}
+                {log.details?.notes || (log.type === 'DIAPER' ? log.subtype : '') || 'Logged'}
             </p>
         )
     }

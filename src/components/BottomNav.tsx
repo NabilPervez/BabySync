@@ -31,6 +31,16 @@ export function BottomNav() {
                     <span className="text-[10px] font-medium">Trends</span>
                 </Link>
 
+                <Link
+                    href="/calendar"
+                    className={`flex flex-col items-center gap-1 group ${isActive('/calendar') ? 'text-blue-500 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`}
+                >
+                    <div className={`p-1 rounded-full transition-colors ${isActive('/calendar') ? '' : 'group-hover:bg-blue-50 dark:group-hover:bg-slate-800'}`}>
+                        <span className={`material-symbols-outlined ${isActive('/calendar') ? 'filled' : ''}`}>calendar_month</span>
+                    </div>
+                    <span className="text-[10px] font-medium">Calendar</span>
+                </Link>
+
                 {/* Settings is now a drawer, so we wrap it or just use the button style */}
                 <div className="flex flex-col items-center gap-1 group text-slate-400 dark:text-slate-500 cursor-pointer">
                     <SettingsDrawer trigger={
