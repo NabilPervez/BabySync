@@ -17,9 +17,9 @@ export function DiaperStats({ data }: DiaperStatsProps) {
 
         return {
             total: todayLogs.length,
-            wet: todayLogs.filter(l => l.subtype === 'wet').length,
-            dirty: todayLogs.filter(l => l.subtype === 'dirty').length,
-            mixed: todayLogs.filter(l => l.subtype === 'mixed').length
+            pee: todayLogs.filter(l => l.subtype === 'pee' || l.subtype === 'wet').length,
+            poop: todayLogs.filter(l => l.subtype === 'poop' || l.subtype === 'dirty').length,
+            both: todayLogs.filter(l => l.subtype === 'both' || l.subtype === 'mixed').length
         }
     }, [data])
 
@@ -38,8 +38,8 @@ export function DiaperStats({ data }: DiaperStatsProps) {
                         <span className="material-symbols-outlined text-[24px]">water_drop</span>
                     </div>
                     <div className="text-center">
-                        <span className="block text-2xl font-bold text-slate-800 dark:text-white">{stats.wet}</span>
-                        <span className="text-xs font-medium text-blue-500 dark:text-blue-300/80 uppercase tracking-wider">Wet</span>
+                        <span className="block text-2xl font-bold text-slate-800 dark:text-white">{stats.pee}</span>
+                        <span className="text-xs font-medium text-blue-500 dark:text-blue-300/80 uppercase tracking-wider">Pee</span>
                     </div>
                 </div>
                 <div className="flex-1 flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-pastel-purple/50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/20">
@@ -47,8 +47,8 @@ export function DiaperStats({ data }: DiaperStatsProps) {
                         <span className="material-symbols-outlined text-[24px]">pest_control_rodent</span>
                     </div>
                     <div className="text-center">
-                        <span className="block text-2xl font-bold text-slate-800 dark:text-white">{stats.dirty + stats.mixed}</span>
-                        <span className="text-xs font-medium text-purple-500 dark:text-purple-300/80 uppercase tracking-wider">Dirty</span>
+                        <span className="block text-2xl font-bold text-slate-800 dark:text-white">{stats.poop + stats.both}</span>
+                        <span className="text-xs font-medium text-purple-500 dark:text-purple-300/80 uppercase tracking-wider">Poop</span>
                     </div>
                 </div>
             </div>

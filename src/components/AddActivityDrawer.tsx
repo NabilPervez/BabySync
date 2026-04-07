@@ -32,6 +32,7 @@ export function AddActivityDrawer({ open, onOpenChange, defaultValues, trigger }
     // Determine default tab based on edited item type
     let defaultTab = "feed"
     if (defaultValues?.type === "DIAPER") defaultTab = "diaper"
+    if (defaultValues?.type === "ACTIVITY") defaultTab = "activity"
     // If we support editing SLEEP later, we might need another tab or handling
 
     const handleSave = async (data: any) => {
@@ -65,15 +66,19 @@ export function AddActivityDrawer({ open, onOpenChange, defaultValues, trigger }
                         <DrawerTitle>{isEditing ? "Edit Activity" : "Log Activity"}</DrawerTitle>
                     </DrawerHeader>
                     <Tabs defaultValue={defaultTab} className="w-full">
-                        <TabsList className="grid w-full grid-cols-2">
+                        <TabsList className="grid w-full grid-cols-3">
                             <TabsTrigger value="feed">Feed</TabsTrigger>
                             <TabsTrigger value="diaper">Diaper</TabsTrigger>
+                            <TabsTrigger value="activity">Activity</TabsTrigger>
                         </TabsList>
                         <TabsContent value="feed" className="p-4 space-y-4">
                             <FeedForm onSave={handleSave} defaultValues={defaultValues?.type === 'FEED' ? defaultValues : undefined} />
                         </TabsContent>
                         <TabsContent value="diaper" className="p-4 space-y-4">
                             <DiaperForm onSave={handleSave} defaultValues={defaultValues?.type === 'DIAPER' ? defaultValues : undefined} />
+                        </TabsContent>
+                        <TabsContent value="activity" className="p-4 space-y-4">
+                            <ActivityForm onSave={handleSave} defaultValues={defaultValues?.type === 'ACTIVITY' ? defaultValues : undefined} />
                         </TabsContent>
                     </Tabs>
                     <DrawerFooter className="pt-2">
@@ -128,7 +133,7 @@ function FeedForm({ onSave, defaultValues }: { onSave: (data: any) => void, defa
             subtype: subtype,
             details: {
                 amount: data.amount,
-                unit: 'oz', // Food might use grams or just text? Keeping oz/unit simple for now
+                unit: (subtype === 'puree' || subtype === 'whole') ? 'qty' : 'oz',
                 notes: data.notes
             }
         })
@@ -205,9 +210,69 @@ function FeedForm({ onSave, defaultValues }: { onSave: (data: any) => void, defa
     )
 }
 
+function ActivityForm({ onSave, defaultValues }: { onSave: (data: any) => void, defaultValues?: any }) {
+    const formDefaults = {
+        type: defaultValues?.subtype || 'play_inside',
+        notes: defaultValues?.details?.notes || ''
+    }
+
+    const { register, handleSubmit, setValue, watch, reset } = useForm({
+        defaultValues: formDefaults
+    })
+    const activityType = watch('type')
+
+    useEffect(() => {
+        reset(formDefaults)
+    }, [defaultValues])
+
+    const onSubmit = (data: any) => {
+        onSave({
+            type: 'ACTIVITY',
+            subtype: data.type,
+            details: { notes: data.notes }
+        })
+        if (!defaultValues) reset()
+    }
+
+    return (
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="flex flex-col gap-2">
+                <Button
+                    type="button"
+                    variant={activityType === 'play_inside' ? 'default' : 'outline'}
+                    onClick={() => setValue('type', 'play_inside')}
+                >
+                    Play Inside
+                </Button>
+                <Button
+                    type="button"
+                    variant={activityType === 'play_outside' ? 'default' : 'outline'}
+                    onClick={() => setValue('type', 'play_outside')}
+                >
+                    Play Outside
+                </Button>
+                <Button
+                    type="button"
+                    variant={activityType === 'bath' ? 'default' : 'outline'}
+                    onClick={() => setValue('type', 'bath')}
+                >
+                    Bath
+                </Button>
+            </div>
+
+            <div className="space-y-2">
+                <Label htmlFor="notes">Notes</Label>
+                <Textarea id="notes" {...register("notes")} placeholder="Details..." />
+            </div>
+
+            <Button type="submit" className="w-full">Save Activity</Button>
+        </form>
+    )
+}
+
 function DiaperForm({ onSave, defaultValues }: { onSave: (data: any) => void, defaultValues?: any }) {
     const formDefaults = {
-        type: defaultValues?.subtype || 'wet',
+        type: defaultValues?.subtype || 'pee',
         notes: defaultValues?.details?.notes || ''
     }
 
@@ -234,24 +299,24 @@ function DiaperForm({ onSave, defaultValues }: { onSave: (data: any) => void, de
             <div className="grid grid-cols-3 gap-2">
                 <Button
                     type="button"
-                    variant={diaperType === 'wet' ? 'default' : 'outline'}
-                    onClick={() => setValue('type', 'wet')}
+                    variant={diaperType === 'pee' ? 'default' : 'outline'}
+                    onClick={() => setValue('type', 'pee')}
                 >
-                    Wet
+                    Pee
                 </Button>
                 <Button
                     type="button"
-                    variant={diaperType === 'dirty' ? 'default' : 'outline'}
-                    onClick={() => setValue('type', 'dirty')}
+                    variant={diaperType === 'poop' ? 'default' : 'outline'}
+                    onClick={() => setValue('type', 'poop')}
                 >
-                    Dirty
+                    Poop
                 </Button>
                 <Button
                     type="button"
-                    variant={diaperType === 'mixed' ? 'default' : 'outline'}
-                    onClick={() => setValue('type', 'mixed')}
+                    variant={diaperType === 'both' ? 'default' : 'outline'}
+                    onClick={() => setValue('type', 'both')}
                 >
-                    Mixed
+                    Both
                 </Button>
             </div>
 

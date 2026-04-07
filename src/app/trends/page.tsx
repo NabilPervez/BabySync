@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import { useLiveQuery } from "dexie-react-hooks"
+import { db } from "@/lib/db"
 import { BottomNav } from "@/components/BottomNav"
 import { SleepDurationChart } from "@/components/trends/SleepDurationChart"
 import { SleepTimesChart } from "@/components/trends/SleepTimesChart"
@@ -8,16 +10,14 @@ import { DailyIntakeChart } from "@/components/trends/DailyIntakeChart"
 import { MealTimesChart } from "@/components/trends/MealTimesChart"
 import { DiaperStats } from "@/components/trends/DiaperStats"
 import { DiaperTimelineChart } from "@/components/trends/DiaperTimelineChart"
+import { AverageIntervals } from "@/components/trends/AverageIntervals"
+import { ActionFrequencyChart } from "@/components/trends/ActionFrequencyChart"
+import { TimeOfDayChart } from "@/components/trends/TimeOfDayChart"
 
 export default function TrendsPage() {
-    const [data, setData] = useState<any[]>([])
+    const liveData = useLiveQuery(() => db.logs.toArray())
+    const data = liveData || []
     const [period, setPeriod] = useState<'week' | 'month'>('week')
-
-    useEffect(() => {
-        fetch('/fake-data.json')
-            .then(res => res.json())
-            .then(setData)
-    }, [])
 
     return (
         <div className="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-white antialiased selection:bg-primary/30 h-full w-full">
@@ -44,6 +44,10 @@ export default function TrendsPage() {
 
                     <DiaperStats data={data} />
                     <DiaperTimelineChart data={data} period={period} />
+
+                    <AverageIntervals data={data} />
+                    <ActionFrequencyChart data={data} period={period} />
+                    <TimeOfDayChart data={data} />
                 </main>
 
                 <BottomNav />

@@ -12,7 +12,7 @@ interface DiaperTimelineChartProps {
 export function DiaperTimelineChart({ data, period }: DiaperTimelineChartProps) {
     const chartData = useMemo(() => {
         // Group by date
-        const grouped = new Map<string, { date: string, wet: number, dirty: number, mixed: number }>()
+        const grouped = new Map<string, { date: string, pee: number, poop: number, both: number }>()
 
         // Sort logs
         const sortedLogs = [...data].sort((a, b) => a.startTime - b.startTime)
@@ -22,13 +22,13 @@ export function DiaperTimelineChart({ data, period }: DiaperTimelineChartProps) 
             const dateKey = format(new Date(log.startTime), "yyyy-MM-dd")
 
             if (!grouped.has(dateKey)) {
-                grouped.set(dateKey, { date: dateKey, wet: 0, dirty: 0, mixed: 0 })
+                grouped.set(dateKey, { date: dateKey, pee: 0, poop: 0, both: 0 })
             }
 
             const entry = grouped.get(dateKey)!
-            if (log.subtype === 'wet') entry.wet++
-            else if (log.subtype === 'dirty') entry.dirty++
-            else entry.mixed++
+            if (log.subtype === 'pee' || log.subtype === 'wet') entry.pee++
+            else if (log.subtype === 'poop' || log.subtype === 'dirty') entry.poop++
+            else entry.both++
         })
 
         return Array.from(grouped.values()).slice(period === 'week' ? -7 : -30)
@@ -59,9 +59,9 @@ export function DiaperTimelineChart({ data, period }: DiaperTimelineChartProps) 
                             contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                             cursor={{ fill: 'transparent' }}
                         />
-                        <Bar dataKey="wet" stackId="a" fill="var(--color-pastel-blue)" radius={[0, 0, 4, 4]} />
-                        <Bar dataKey="dirty" stackId="a" fill="var(--color-pastel-purple)" />
-                        <Bar dataKey="mixed" stackId="a" fill="var(--color-pastel-pink)" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="pee" stackId="a" fill="var(--color-pastel-blue)" radius={[0, 0, 4, 4]} />
+                        <Bar dataKey="poop" stackId="a" fill="var(--color-pastel-purple)" />
+                        <Bar dataKey="both" stackId="a" fill="var(--color-pastel-pink)" radius={[4, 4, 0, 0]} />
                     </BarChart>
                 </ResponsiveContainer>
             </div>
