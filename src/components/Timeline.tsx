@@ -82,6 +82,9 @@ function getLogTitle(log: any) {
         if (log.subtype === 'bath') return 'Bath Time'
         return 'Activity'
     }
+    if (log.type === 'MEDICINE') {
+        return 'Medicine'
+    }
     return `${log.subtype || ''} ${log.type.toLowerCase()}`
 }
 
@@ -138,6 +141,14 @@ function renderIcon(log: any) {
             hoverBorder = 'group-hover:border-emerald-400'
             hoverText = 'group-hover:text-emerald-400'
             break
+        case 'MEDICINE':
+            iconName = 'vaccines'
+            bgClass = 'bg-rose-50 dark:bg-slate-800'
+            textClass = 'text-rose-500'
+            borderClass = 'border-rose-100 dark:border-slate-700'
+            hoverBorder = 'group-hover:border-rose-400'
+            hoverText = 'group-hover:text-rose-400'
+            break
     }
 
     return (
@@ -167,6 +178,23 @@ function renderDetails(log: any) {
                         {log.details.amount} {log.details.unit || 'oz'}
                     </span>
                 )}
+                {log.details?.notes && <span className="text-xs text-slate-400 dark:text-slate-500">{log.details.notes}</span>}
+            </div>
+        )
+    }
+    if (log.type === 'MEDICINE') {
+        return (
+            <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                    <span className="capitalize font-medium text-sm text-slate-700 dark:text-slate-300">
+                        {log.subtype} {log.details?.kind ? `(${log.details.kind})` : ''}
+                    </span>
+                    {log.details?.amount && (
+                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-200">
+                            {log.details.amount} {log.details.unit || 'mL'}
+                        </span>
+                    )}
+                </div>
                 {log.details?.notes && <span className="text-xs text-slate-400 dark:text-slate-500">{log.details.notes}</span>}
             </div>
         )

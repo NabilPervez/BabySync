@@ -33,6 +33,7 @@ export function AddActivityDrawer({ open, onOpenChange, defaultValues, trigger }
     let defaultTab = "feed"
     if (defaultValues?.type === "DIAPER") defaultTab = "diaper"
     if (defaultValues?.type === "ACTIVITY") defaultTab = "activity"
+    if (defaultValues?.type === "MEDICINE") defaultTab = "medicine"
     // If we support editing SLEEP later, we might need another tab or handling
 
     const handleSave = async (data: any) => {
@@ -66,10 +67,11 @@ export function AddActivityDrawer({ open, onOpenChange, defaultValues, trigger }
                         <DrawerTitle>{isEditing ? "Edit Activity" : "Log Activity"}</DrawerTitle>
                     </DrawerHeader>
                     <Tabs defaultValue={defaultTab} className="w-full">
-                        <TabsList className="grid w-full grid-cols-3">
+                        <TabsList className="grid w-full grid-cols-4">
                             <TabsTrigger value="feed">Feed</TabsTrigger>
                             <TabsTrigger value="diaper">Diaper</TabsTrigger>
                             <TabsTrigger value="activity">Activity</TabsTrigger>
+                            <TabsTrigger value="medicine">Meds</TabsTrigger>
                         </TabsList>
                         <TabsContent value="feed" className="p-4 space-y-4">
                             <FeedForm onSave={handleSave} defaultValues={defaultValues?.type === 'FEED' ? defaultValues : undefined} />
@@ -79,6 +81,9 @@ export function AddActivityDrawer({ open, onOpenChange, defaultValues, trigger }
                         </TabsContent>
                         <TabsContent value="activity" className="p-4 space-y-4">
                             <ActivityForm onSave={handleSave} defaultValues={defaultValues?.type === 'ACTIVITY' ? defaultValues : undefined} />
+                        </TabsContent>
+                        <TabsContent value="medicine" className="p-4 space-y-4">
+                            <MedicineForm onSave={handleSave} defaultValues={defaultValues?.type === 'MEDICINE' ? defaultValues : undefined} />
                         </TabsContent>
                     </Tabs>
                     <DrawerFooter className="pt-2">
@@ -206,6 +211,100 @@ function FeedForm({ onSave, defaultValues }: { onSave: (data: any) => void, defa
             </div>
 
             <Button type="submit" className="w-full">Save Feed</Button>
+        </form>
+    )
+}
+
+function MedicineForm({ onSave, defaultValues }: { onSave: (data: any) => void, defaultValues?: any }) {
+    const formDefaults = {
+        brand: defaultValues?.subtype || 'motrin',
+        kind: defaultValues?.details?.kind || 'infant',
+        amount: defaultValues?.details?.amount || '',
+        notes: defaultValues?.details?.notes || ''
+    }
+
+    const { register, handleSubmit, setValue, watch, reset } = useForm({
+        defaultValues: formDefaults
+    })
+
+    const brand = watch('brand')
+    const kind = watch('kind')
+
+    useEffect(() => {
+        reset(formDefaults)
+    }, [defaultValues])
+
+    const onSubmit = (data: any) => {
+        onSave({
+            type: 'MEDICINE',
+            subtype: data.brand,
+            details: {
+                kind: data.kind,
+                amount: data.amount,
+                unit: 'mL',
+                notes: data.notes
+            }
+        })
+        if (!defaultValues) reset()
+    }
+
+    return (
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="space-y-2">
+                <Label>Brand</Label>
+                <div className="flex gap-2">
+                    <Button
+                        type="button"
+                        variant={brand === 'motrin' ? 'default' : 'outline'}
+                        onClick={() => setValue('brand', 'motrin')}
+                        className="flex-1"
+                    >
+                        Motrin
+                    </Button>
+                    <Button
+                        type="button"
+                        variant={brand === 'tylenol' ? 'default' : 'outline'}
+                        onClick={() => setValue('brand', 'tylenol')}
+                        className="flex-1"
+                    >
+                        Tylenol
+                    </Button>
+                </div>
+            </div>
+
+            <div className="space-y-2">
+                <Label>Kind</Label>
+                <div className="flex gap-2">
+                    <Button
+                        type="button"
+                        variant={kind === 'infant' ? 'default' : 'outline'}
+                        onClick={() => setValue('kind', 'infant')}
+                        className="flex-1"
+                    >
+                        Infant
+                    </Button>
+                    <Button
+                        type="button"
+                        variant={kind === 'children' ? 'default' : 'outline'}
+                        onClick={() => setValue('kind', 'children')}
+                        className="flex-1"
+                    >
+                        Children's
+                    </Button>
+                </div>
+            </div>
+
+            <div className="space-y-2">
+                <Label htmlFor="amount">Amount (mL)</Label>
+                <Input id="amount" type="number" step="0.1" {...register("amount")} placeholder="2.5" />
+            </div>
+
+            <div className="space-y-2">
+                <Label htmlFor="notes">Notes</Label>
+                <Textarea id="notes" {...register("notes")} placeholder="Details..." />
+            </div>
+
+            <Button type="submit" className="w-full">Save Medicine</Button>
         </form>
     )
 }
