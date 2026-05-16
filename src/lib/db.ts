@@ -2,7 +2,7 @@ import Dexie, { type EntityTable } from 'dexie';
 
 interface Log {
     id: number;
-    type: 'SLEEP' | 'FEED' | 'DIAPER' | 'ACTIVITY';
+    type: 'SLEEP' | 'FEED' | 'DIAPER' | 'ACTIVITY' | 'MEDICINE';
     subtype?: string; // e.g., 'breast', 'bottle', 'wet', 'dirty'
     startTime: number;
     endTime?: number;
