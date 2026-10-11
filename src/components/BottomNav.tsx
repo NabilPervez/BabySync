@@ -1,58 +1,37 @@
 "use client"
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { SettingsDrawer } from '@/components/SettingsDrawer'
+import { useState } from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { SettingsDrawer } from "@/components/SettingsDrawer"
+
+const LINKS = [
+    { href: "/", icon: "home", label: "Today" },
+    { href: "/trends", icon: "bar_chart", label: "Trends" },
+    { href: "/calendar", icon: "calendar_month", label: "History" },
+]
 
 export function BottomNav() {
     const pathname = usePathname()
-
-    const isActive = (path: string) => pathname === path
+    const [settingsOpen, setSettingsOpen] = useState(false)
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 z-20 bg-background-light/95 dark:bg-surface-darker/95 backdrop-blur-lg border-t border-slate-200 dark:border-white/5 pb-safe pt-2">
-            <div className="flex items-center justify-between px-6 pb-4">
-                <Link
-                    href="/"
-                    className={`flex flex-col items-center gap-1 group ${isActive('/') ? 'text-blue-500 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`}
-                >
-                    <div className={`p-1 rounded-full transition-colors ${isActive('/') ? '' : 'group-hover:bg-blue-50 dark:group-hover:bg-slate-800'}`}>
-                        <span className={`material-symbols-outlined ${isActive('/') ? 'filled' : ''}`}>dashboard</span>
-                    </div>
-                    <span className="text-[10px] font-medium">Dashboard</span>
-                </Link>
-
-                <Link
-                    href="/trends"
-                    className={`flex flex-col items-center gap-1 group ${isActive('/trends') ? 'text-blue-500 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`}
-                >
-                    <div className={`p-1 rounded-full transition-colors ${isActive('/trends') ? '' : 'group-hover:bg-blue-50 dark:group-hover:bg-slate-800'}`}>
-                        <span className={`material-symbols-outlined ${isActive('/trends') ? 'filled' : ''}`}>bar_chart</span>
-                    </div>
-                    <span className="text-[10px] font-medium">Trends</span>
-                </Link>
-
-                <Link
-                    href="/calendar"
-                    className={`flex flex-col items-center gap-1 group ${isActive('/calendar') ? 'text-blue-500 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`}
-                >
-                    <div className={`p-1 rounded-full transition-colors ${isActive('/calendar') ? '' : 'group-hover:bg-blue-50 dark:group-hover:bg-slate-800'}`}>
-                        <span className={`material-symbols-outlined ${isActive('/calendar') ? 'filled' : ''}`}>calendar_month</span>
-                    </div>
-                    <span className="text-[10px] font-medium">Calendar</span>
-                </Link>
-
-                {/* Settings is now a drawer, so we wrap it or just use the button style */}
-                <div className="flex flex-col items-center gap-1 group text-slate-400 dark:text-slate-500 cursor-pointer">
-                    <SettingsDrawer trigger={
-                        <div className="flex flex-col items-center gap-1">
-                            <div className="p-1 rounded-full group-hover:bg-blue-50 dark:group-hover:bg-slate-800 transition-colors">
-                                <span className="material-symbols-outlined">settings</span>
-                            </div>
-                            <span className="text-[10px] font-medium">Settings</span>
-                        </div>
-                    } />
-                </div>
+        <nav className="finals-nav fixed bottom-0 inset-x-0 z-30" aria-label="Main">
+            <div className="mx-auto max-w-md grid grid-cols-4">
+                {LINKS.map(l => {
+                    const active = pathname === l.href
+                    return (
+                        <Link key={l.href} href={l.href} className="finals-nav-item" data-active={active} aria-current={active ? "page" : undefined}>
+                            <span className="material-symbols-outlined">{l.icon}</span>
+                            <span>{l.label}</span>
+                        </Link>
+                    )
+                })}
+                <button onClick={() => setSettingsOpen(true)} className="finals-nav-item">
+                    <span className="material-symbols-outlined">settings</span>
+                    <span>Settings</span>
+                </button>
             </div>
+            <SettingsDrawer open={settingsOpen} onOpenChange={setSettingsOpen} />
         </nav>
     )
 }

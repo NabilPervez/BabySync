@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
         description: 'A shared, real-time baby tracker.',
         start_url: '/',
         display: 'standalone',
-        background_color: '#f8fafc',
-        theme_color: '#3b82f6',
+        background_color: '#0a0a0b',
+        theme_color: '#0a0a0b',
         icons: [
             {
                 src: '/icon-192x192.png',

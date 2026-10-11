@@ -1,9 +1,10 @@
 "use client"
 
+import type { Log } from "@/lib/db"
 import { useMemo } from "react"
 
 interface AverageIntervalsProps {
-    data: any[]
+    data: Log[]
 }
 
 export function AverageIntervals({ data }: AverageIntervalsProps) {

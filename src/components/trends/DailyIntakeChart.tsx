@@ -1,11 +1,12 @@
 "use client"
 
+import type { Log } from "@/lib/db"
 import { useMemo } from "react"
 import { Area, AreaChart, ResponsiveContainer, Tooltip } from "recharts"
 import { format } from "date-fns"
 
 interface DailyIntakeChartProps {
-    data: any[]
+    data: Log[]
     period: 'week' | 'month'
 }
 
@@ -17,7 +18,7 @@ export function DailyIntakeChart({ data, period }: DailyIntakeChartProps) {
         data.forEach(log => {
             if (log.type !== 'FEED') return
             const dateKey = format(new Date(log.startTime), "yyyy-MM-dd")
-            const amount = parseFloat(log.details?.amount || 0)
+            const amount = parseFloat(String(log.details?.amount ?? 0))
             grouped.set(dateKey, (grouped.get(dateKey) || 0) + amount)
         })
 

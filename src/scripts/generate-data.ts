@@ -10,7 +10,7 @@ interface Log {
     startTime: number;
     endTime?: number;
     subtype?: string;
-    details?: any;
+    details?: Record<string, unknown>;
     createdAt: number;
 }
 

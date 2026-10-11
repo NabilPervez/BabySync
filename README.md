@@ -35,3 +35,12 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 # BabySync
+
+## Features (Oct 2026 update)
+
+- **Toddler tracking:** meals & snacks, naps/night sleep, play (walks, playground, reading, music, art, playdates, classes, screen time, bath), potty training, meds with per-medicine next-dose timers, health (temperature, teeth, teething), mood & milestones.
+- **One-tap timers:** start a walk / play / outside timer and tap Done when finished.
+- **Share updates:** send today's recap, or a single entry, by WhatsApp or SMS. Save a phone number in Settings to send straight to it.
+- **Edit anything:** change the time, duration or details of any entry, or delete it.
+- **Backup / restore:** export and import your data as JSON (data lives only on the device).
+- Theme: THE FINALS-inspired black / red / pink / yellow palette.

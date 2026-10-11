@@ -1,11 +1,12 @@
 "use client"
 
+import type { Log } from "@/lib/db"
 import { useMemo } from "react"
 import { Bar, BarChart, CartesianGrid, XAxis, Tooltip, ResponsiveContainer } from "recharts"
 import { format } from "date-fns"
 
 interface DiaperTimelineChartProps {
-    data: any[]
+    data: Log[]
     period: 'week' | 'month'
 }
 

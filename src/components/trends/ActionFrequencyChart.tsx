@@ -1,10 +1,11 @@
 "use client"
 
+import type { Log } from "@/lib/db"
 import { useMemo } from "react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
 
 interface ActionFrequencyChartProps {
-    data: any[]
+    data: Log[]
     period: 'week' | 'month'
 }
 

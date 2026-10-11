@@ -1,12 +1,13 @@
 "use client"
 
+import type { Log } from "@/lib/db"
 import { useMemo } from "react"
 import { Bar, BarChart, CartesianGrid, XAxis, Tooltip, ResponsiveContainer, Cell } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns"
 
 interface SleepDurationChartProps {
-    data: any[]
+    data: Log[]
     period: 'week' | 'month'
 }
 

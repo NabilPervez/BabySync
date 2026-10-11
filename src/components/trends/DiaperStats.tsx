@@ -1,10 +1,11 @@
 "use client"
 
+import type { Log } from "@/lib/db"
 import { useMemo } from "react"
 import { isSameDay } from "date-fns"
 
 interface DiaperStatsProps {
-    data: any[]
+    data: Log[]
 }
 
 export function DiaperStats({ data }: DiaperStatsProps) {
@@ -28,7 +29,7 @@ export function DiaperStats({ data }: DiaperStatsProps) {
             <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-primary text-[20px]">layers</span>
-                    <h2 className="text-base font-semibold text-gray-900 dark:text-white">Today's Output</h2>
+                    <h2 className="text-base font-semibold text-gray-900 dark:text-white">Today&apos;s Output</h2>
                 </div>
                 <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Total: {stats.total}</span>
             </div>

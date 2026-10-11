@@ -1,81 +1,66 @@
 "use client"
 import { useState } from "react"
+import { format, differenceInMonths } from "date-fns"
+import { useLiveQuery } from "dexie-react-hooks"
 import { LiveStateCard } from "@/components/LiveStateCard"
 import { Timeline } from "@/components/Timeline"
 import { AddActivityDrawer } from "@/components/AddActivityDrawer"
+import { ShareDrawer } from "@/components/ShareDrawer"
 import { BottomNav } from "@/components/BottomNav"
+import { useNow } from "@/components/LiveStateCard"
 import { LastActivityStats } from "@/components/LastActivityStats"
-import { format } from "date-fns"
+import { db, type Log, type LogType } from "@/lib/db"
 
 export default function Home() {
-  const today = format(new Date(), "EEEE, MMM d")
-
-  // State for controlling the drawer
+  const now = useNow(60_000)
+  const baby = useLiveQuery(() => db.babies.limit(1).first())
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [editingLog, setEditingLog] = useState<any>(null)
+  const [editingLog, setEditingLog] = useState<Partial<Log> | null>(null)
+  const [shareOpen, setShareOpen] = useState(false)
+  const [shareLog, setShareLog] = useState<Log | null>(null)
 
-  const handleOpenDrawer = () => {
-    setEditingLog(null) // Clear editing state for new entry
-    setDrawerOpen(true)
-  }
-
-  const handleEditLog = (log: any) => {
+  const openLog = (log: Partial<Log> | null) => {
     setEditingLog(log)
     setDrawerOpen(true)
   }
+  const openShare = (log: Log | null) => {
+    setShareLog(log)
+    setShareOpen(true)
+  }
+
+  const months = baby?.dob ? differenceInMonths(now, baby.dob) : undefined
+  const age = months === undefined ? "" : months < 24 ? `${months} mo` : `${Math.floor(months / 12)} yr ${months % 12} mo`
 
   return (
-    <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white h-full w-full flex flex-col overflow-hidden relative font-[var(--font-display)]">
-
-      {/* Background Gradients */}
-      <div className="fixed top-0 left-0 right-0 h-32 bg-gradient-to-b from-background-light dark:from-background-dark to-transparent pointer-events-none z-10"></div>
-      <div className="fixed bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background-light dark:from-background-dark to-transparent pointer-events-none z-10"></div>
-
-      {/* Header */}
-      <header className="sticky top-0 z-20 flex items-center justify-between px-5 pt-6 pb-4 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 safe-top">
-        <div className="flex flex-col">
-          <h1 className="text-xl font-bold tracking-tight text-slate-800 dark:text-blue-50">BabySync</h1>
-          <span className="text-xs font-medium text-slate-500 dark:text-slate-400 capitalize">{today}</span>
+    <div className="finals-page">
+      <header className="finals-header">
+        <div className="min-w-0">
+          <p className="finals-label">{format(now, "EEEE, MMM d")}</p>
+          <h1 className="finals-heading text-3xl truncate">
+            {baby?.name || "BabySync"}
+            {age && <span className="ml-2 text-base text-[var(--finals-muted)]">{age}</span>}
+          </h1>
         </div>
+        <button onClick={() => openShare(null)} className="finals-btn finals-btn-primary text-sm px-4" aria-label="Send today's recap by WhatsApp or SMS">
+          <span className="material-symbols-outlined text-[20px]">send</span> Update
+        </button>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto no-scrollbar pb-24 px-5 relative z-10">
-        <div className="mt-4">
-          <LastActivityStats />
-        </div>
-
-        <div className="mb-8">
-          <LiveStateCard />
-        </div>
-
-        <div className="relative">
-          <Timeline onEdit={handleEditLog} />
+      <main className="finals-main space-y-5">
+        <LiveStateCard />
+        <LastActivityStats onQuickLog={type => openLog({ type: type as LogType })} />
+        <div>
+          <h2 className="finals-heading text-xl mb-3">Timeline</h2>
+          <Timeline onEdit={openLog} onShare={openShare} />
         </div>
       </main>
 
-      {/* FAB - Add Activity */}
-      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-30">
-        {/* We pass trigger null here because we are controlling it via state/FAB click, 
-              but actually AddActivityDrawer expects us to render the trigger or use controlled state.
-              Since we want the FAB to open it, we can put the FAB inside a customized trigger OR 
-              just use the open prop.
-          */}
-        <button
-          onClick={handleOpenDrawer}
-          className="flex items-center justify-center w-14 h-14 rounded-full bg-primary text-white shadow-[0_8px_30px_rgba(96,165,250,0.4)] hover:scale-105 active:scale-95 transition-all border-2 border-white dark:border-surface-dark"
-        >
-          <span className="material-symbols-outlined text-[32px]">add</span>
-        </button>
+      <button onClick={() => openLog(null)} className="finals-fab" aria-label="Log an activity">
+        <span className="material-symbols-outlined text-[34px]">add</span>
+      </button>
 
-        <AddActivityDrawer
-          open={drawerOpen}
-          onOpenChange={setDrawerOpen}
-          defaultValues={editingLog}
-        />
-      </div>
-
-      {/* Bottom Nav */}
+      <AddActivityDrawer open={drawerOpen} onOpenChange={setDrawerOpen} defaultValues={editingLog} />
+      <ShareDrawer open={shareOpen} onOpenChange={setShareOpen} log={shareLog} />
       <BottomNav />
     </div>
   )

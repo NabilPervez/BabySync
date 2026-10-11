@@ -2,101 +2,104 @@
 
 import { useEffect, useState } from "react"
 import { useLiveQuery } from "dexie-react-hooks"
-import { db } from "@/lib/db"
-import { differenceInMilliseconds, intervalToDuration } from "date-fns"
+import { db, latestOfType } from "@/lib/db"
+import { formatMinutes, getSubtype, guessSleepSubtype } from "@/lib/log-types"
+
+export function useNow(intervalMs = 1000) {
+    const [now, setNow] = useState(() => Date.now())
+    useEffect(() => {
+        const t = setInterval(() => setNow(Date.now()), intervalMs)
+        return () => clearInterval(t)
+    }, [intervalMs])
+    return now
+}
+
+function clock(ms: number) {
+    const s = Math.max(0, Math.floor(ms / 1000))
+    const h = Math.floor(s / 3600)
+    const m = Math.floor((s % 3600) / 60)
+    const sec = s % 60
+    const pad = (n: number) => String(n).padStart(2, "0")
+    return h ? `${h}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}`
+}
+
+async function startActivity(subtype: string) {
+    const t = Date.now()
+    await db.logs.add({ type: "ACTIVITY", subtype, startTime: t, createdAt: t })
+}
+
+const stop = (id: number) => db.logs.update(id, { endTime: Date.now() })
 
 export function LiveStateCard() {
-    const lastSleep = useLiveQuery(async () => {
-        const logs = await db.logs
-            .where("type")
-            .equals("SLEEP")
-            .reverse()
-            .sortBy("startTime")
-        return logs[0]
-    })
+    const now = useNow()
+    const lastSleep = useLiveQuery(() => latestOfType("SLEEP"))
+    // Timed activities (walks, play) that were started but not ended
+    const running = useLiveQuery(() =>
+        db.logs.where("type").equals("ACTIVITY").filter(l => !l.endTime).toArray()
+    )
 
-    const isSleeping = lastSleep && !lastSleep.endTime
-    const startTime = isSleeping ? lastSleep.startTime : (lastSleep?.endTime || Date.now())
+    const isSleeping = !!lastSleep && !lastSleep.endTime
+    const since = isSleeping ? lastSleep!.startTime : lastSleep?.endTime
 
-    const [elapsed, setElapsed] = useState(0)
-
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setElapsed(Date.now() - startTime)
-        }, 1000)
-        return () => clearInterval(timer)
-    }, [startTime])
-
-    const formatTime = (ms: number) => {
-        const duration = intervalToDuration({ start: 0, end: ms })
-        // Format: 1h 45m or 45m 10s
-        if (duration.hours) {
-            return `${duration.hours}h ${duration.minutes}m`
-        }
-        return `${duration.minutes || 0}m ${duration.seconds || 0}s`
-    }
-
-    const handleToggleSleep = async () => {
+    const toggleSleep = async () => {
         if (isSleeping) {
-            if (lastSleep) {
-                await db.logs.update(lastSleep.id, { endTime: Date.now() })
-            }
+            await db.logs.update(lastSleep!.id, { endTime: Date.now() })
         } else {
-            await db.logs.add({
-                type: "SLEEP",
-                startTime: Date.now(),
-                createdAt: Date.now(),
-            })
+            const t = Date.now()
+            await db.logs.add({ type: "SLEEP", subtype: guessSleepSubtype(t), startTime: t, createdAt: t })
         }
     }
 
     return (
-        <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-surface-dark shadow-md shadow-blue-900/5 ring-1 ring-slate-900/5 dark:ring-white/10 p-5">
-            <div className={`absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 rounded-full blur-3xl ${isSleeping ? 'bg-indigo-500/20' : 'bg-blue-400/20'}`}></div>
-            <div className="relative z-10 flex flex-col gap-4">
-                <div className="flex items-start justify-between">
-                    <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-2 text-primary">
-                            <span className={`material-symbols-outlined text-[20px] fill-1 ${isSleeping ? 'text-accent-lavender' : 'text-accent-yellow'}`}>
-                                {isSleeping ? 'bedtime' : 'wb_sunny'}
-                            </span>
-                            <span className="text-sm font-semibold uppercase tracking-wider text-blue-500 dark:text-blue-300">
-                                {isSleeping ? 'Sleeping' : 'Awake'}
-                            </span>
-                        </div>
-                        <h2 className="text-3xl font-bold text-slate-800 dark:text-white tracking-tight">
-                            {formatTime(elapsed)}
-                        </h2>
-                    </div>
-
-                    <div className="w-12 h-12 rounded-full border-2 border-blue-100 dark:border-blue-900 flex items-center justify-center relative">
-                        <div
-                            className="absolute inset-0 rounded-full border-2 border-primary border-t-transparent animate-spin"
-                            style={{ animationDuration: '3s' }}
-                        ></div>
-                        <span className="material-symbols-outlined text-primary">schedule</span>
-                    </div>
-                </div>
-
-                <div className="h-px w-full bg-slate-100 dark:bg-slate-700"></div>
-
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={handleToggleSleep}
-                        className={`flex-1 h-12 font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-95 text-white
-                ${isSleeping
-                                ? 'bg-indigo-500 hover:bg-indigo-600 shadow-indigo-500/30'
-                                : 'bg-primary hover:bg-blue-500 shadow-blue-500/30'
-                            }`}
-                    >
-                        <span className="material-symbols-outlined">
-                            {isSleeping ? 'wb_sunny' : 'bedtime'}
-                        </span>
-                        {isSleeping ? 'Wake Up' : 'Start Sleep'}
-                    </button>
-                    {/* Pencil removed */}
+        <section className="finals-card finals-card-accent p-5" style={{ "--tile": isSleeping ? "var(--finals-pink)" : "var(--finals-yellow)" } as React.CSSProperties}>
+            <div className="flex items-center justify-between">
+                <div>
+                    <p className="finals-label flex items-center gap-1.5" style={{ color: "var(--tile)" }}>
+                        <span className="material-symbols-outlined text-[18px]">{isSleeping ? "bedtime" : "bolt"}</span>
+                        {isSleeping ? `${getSubtype(lastSleep!)?.label ?? "Sleep"} in progress` : "Awake for"}
+                    </p>
+                    <p className="finals-heading text-5xl tabular-nums mt-1" aria-live="off">
+                        {since ? clock(now - since) : "--:--"}
+                    </p>
+                    {!since && <p className="text-xs text-[var(--finals-muted)] mt-1">Tap the button when they fall asleep</p>}
                 </div>
             </div>
-        </div>
+
+            <button onClick={toggleSleep} className="finals-btn finals-btn-primary w-full mt-4 text-lg" style={isSleeping ? { background: "var(--finals-pink)" } : undefined}>
+                <span className="material-symbols-outlined">{isSleeping ? "wb_sunny" : "bedtime"}</span>
+                {isSleeping ? "Woke up" : "Start sleep"}
+            </button>
+
+            {running && running.length > 0 && (
+                <ul className="mt-4 space-y-2">
+                    {running.map(a => (
+                        <li key={a.id} className="flex items-center gap-3 p-3 finals-inset">
+                            <span className="material-symbols-outlined text-[var(--finals-cyan)]">{getSubtype(a)?.icon ?? "toys"}</span>
+                            <span className="flex-1 font-bold uppercase tracking-wide text-sm">
+                                {getSubtype(a)?.label ?? "Activity"} · <span className="tabular-nums">{formatMinutes((now - a.startTime) / 60000)}</span>
+                            </span>
+                            <button onClick={() => stop(a.id)} className="finals-chip" data-active="true" style={{ "--tile": "var(--finals-cyan)" } as React.CSSProperties}>
+                                Done
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            )}
+
+            {!isSleeping && (
+                <div className="grid grid-cols-3 gap-2 mt-3">
+                    {[
+                        { sub: "walk", icon: "directions_walk", label: "Walk" },
+                        { sub: "play_inside", icon: "toys", label: "Play" },
+                        { sub: "play_outside", icon: "park", label: "Outside" },
+                    ].map(b => (
+                        <button key={b.sub} onClick={() => startActivity(b.sub)} className="finals-btn finals-btn-ghost text-sm" aria-label={`Start ${b.label} timer`}>
+                            <span className="material-symbols-outlined text-[20px] text-[var(--finals-cyan)]">{b.icon}</span>
+                            {b.label}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </section>
     )
 }

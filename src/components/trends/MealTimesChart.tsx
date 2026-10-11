@@ -1,11 +1,12 @@
 "use client"
 
+import type { Log } from "@/lib/db"
 import { useMemo } from "react"
 import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts"
 import { format } from "date-fns"
 
 interface MealTimesChartProps {
-    data: any[]
+    data: Log[]
     period: 'week' | 'month'
 }
 
@@ -22,7 +23,7 @@ export function MealTimesChart({ data, period }: MealTimesChartProps) {
             .map(log => {
                 const date = new Date(log.startTime)
                 const hour = date.getHours() + (date.getMinutes() / 60)
-                const amount = parseFloat(log.details?.amount || 2) // Default size if unknown
+                const amount = parseFloat(String(log.details?.amount ?? 2)) // Default size if unknown
 
                 return {
                     x: date.setHours(0, 0, 0, 0),

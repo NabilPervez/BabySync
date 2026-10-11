@@ -1,10 +1,11 @@
 "use client"
 
+import type { Log } from "@/lib/db"
 import { useMemo } from "react"
 import { Bar, BarChart, CartesianGrid, XAxis, Tooltip, ResponsiveContainer } from "recharts"
 
 interface TimeOfDayChartProps {
-    data: any[]
+    data: Log[]
 }
 
 export function TimeOfDayChart({ data }: TimeOfDayChartProps) {

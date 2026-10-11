@@ -1,430 +1,201 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Plus } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useState } from "react"
+import { format } from "date-fns"
 import {
     Drawer,
     DrawerContent,
     DrawerHeader,
     DrawerTitle,
-    DrawerTrigger,
-    DrawerFooter,
-    DrawerClose,
+    DrawerDescription,
 } from "@/components/ui/drawer"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { db } from "@/lib/db"
-import { useForm } from "react-hook-form"
+import { db, type Log, type LogType } from "@/lib/db"
+import { CATEGORIES, amountUnitFor, getCategory, guessSleepSubtype } from "@/lib/log-types"
 
 interface AddActivityDrawerProps {
     open: boolean
     onOpenChange: (open: boolean) => void
-    defaultValues?: any // Should ideally be Log type
-    trigger?: React.ReactNode
+    /** An existing log to edit, or a partial one (e.g. just `type`) to pre-select */
+    defaultValues?: Partial<Log> | null
 }
 
-export function AddActivityDrawer({ open, onOpenChange, defaultValues, trigger }: AddActivityDrawerProps) {
-    const isEditing = !!defaultValues && !!defaultValues.id
-
-    // Determine default tab based on edited item type
-    let defaultTab = "feed"
-    if (defaultValues?.type === "DIAPER") defaultTab = "diaper"
-    if (defaultValues?.type === "ACTIVITY") defaultTab = "activity"
-    if (defaultValues?.type === "MEDICINE") defaultTab = "medicine"
-    // If we support editing SLEEP later, we might need another tab or handling
-
-    const handleSave = async (data: any) => {
-        try {
-            const logData = {
-                ...data,
-                // If editing, keep original startTime unless we add date picker later
-                startTime: defaultValues?.startTime || Date.now(),
-                // If editing, keep original createdAt
-                createdAt: defaultValues?.createdAt || Date.now(),
-            }
-
-            if (isEditing) {
-                await db.logs.update(defaultValues.id, logData)
-            } else {
-                await db.logs.add(logData)
-            }
-
-            onOpenChange(false)
-        } catch (error) {
-            console.error("Failed to save log:", error)
-        }
-    }
-
+export function AddActivityDrawer({ open, onOpenChange, defaultValues }: AddActivityDrawerProps) {
+    const isEditing = !!defaultValues?.id
     return (
         <Drawer open={open} onOpenChange={onOpenChange}>
-            {trigger && <DrawerTrigger asChild>{trigger}</DrawerTrigger>}
-            <DrawerContent>
-                <div className="mx-auto w-full max-w-sm">
-                    <DrawerHeader>
-                        <DrawerTitle>{isEditing ? "Edit Activity" : "Log Activity"}</DrawerTitle>
+            <DrawerContent className="finals-drawer">
+                <div className="mx-auto w-full max-w-md overflow-y-auto max-h-[85dvh]">
+                    <DrawerHeader className="text-left">
+                        <DrawerTitle className="finals-heading text-2xl">
+                            {isEditing ? "Edit entry" : "Log it"}
+                        </DrawerTitle>
+                        <DrawerDescription className="sr-only">Record an activity</DrawerDescription>
                     </DrawerHeader>
-                    <Tabs defaultValue={defaultTab} className="w-full">
-                        <TabsList className="grid w-full grid-cols-4">
-                            <TabsTrigger value="feed">Feed</TabsTrigger>
-                            <TabsTrigger value="diaper">Diaper</TabsTrigger>
-                            <TabsTrigger value="activity">Activity</TabsTrigger>
-                            <TabsTrigger value="medicine">Meds</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="feed" className="p-4 space-y-4">
-                            <FeedForm onSave={handleSave} defaultValues={defaultValues?.type === 'FEED' ? defaultValues : undefined} />
-                        </TabsContent>
-                        <TabsContent value="diaper" className="p-4 space-y-4">
-                            <DiaperForm onSave={handleSave} defaultValues={defaultValues?.type === 'DIAPER' ? defaultValues : undefined} />
-                        </TabsContent>
-                        <TabsContent value="activity" className="p-4 space-y-4">
-                            <ActivityForm onSave={handleSave} defaultValues={defaultValues?.type === 'ACTIVITY' ? defaultValues : undefined} />
-                        </TabsContent>
-                        <TabsContent value="medicine" className="p-4 space-y-4">
-                            <MedicineForm onSave={handleSave} defaultValues={defaultValues?.type === 'MEDICINE' ? defaultValues : undefined} />
-                        </TabsContent>
-                    </Tabs>
-                    <DrawerFooter className="pt-2">
-                        <DrawerClose asChild>
-                            <Button variant="outline">Cancel</Button>
-                        </DrawerClose>
-                    </DrawerFooter>
+                    {/* key resets the form every time the drawer opens on a different entry */}
+                    {open && (
+                        <LogForm
+                            key={defaultValues?.id ?? defaultValues?.type ?? "new"}
+                            initial={defaultValues ?? undefined}
+                            onDone={() => onOpenChange(false)}
+                        />
+                    )}
                 </div>
             </DrawerContent>
         </Drawer>
     )
 }
 
-function FeedForm({ onSave, defaultValues }: { onSave: (data: any) => void, defaultValues?: any }) {
-    // Flatten default values for form
-    const formDefaults = {
-        type: defaultValues?.subtype || 'bottle',
-        // If subtype is 'puree' or 'whole', we want the main type toggle to be 'food' and foodType to be set
-        amount: defaultValues?.details?.amount || '',
-        notes: defaultValues?.details?.notes || '',
-        foodType: (defaultValues?.subtype === 'puree' || defaultValues?.subtype === 'whole') ? defaultValues.subtype : 'puree'
+const toLocalInput = (ts: number) => format(ts, "yyyy-MM-dd'T'HH:mm")
+const fromLocalInput = (s: string) => new Date(s).getTime()
+
+function LogForm({ initial, onDone }: { initial?: Partial<Log>, onDone: () => void }) {
+    const isEditing = !!initial?.id
+    const [type, setType] = useState<LogType>(initial?.type ?? "FEED")
+    const category = getCategory(type)
+    const [subtype, setSubtype] = useState<string>(
+        initial?.subtype ?? (type === "SLEEP" ? guessSleepSubtype() : category.subtypes[0].value)
+    )
+    const [start, setStart] = useState(() => toLocalInput(initial?.startTime ?? Date.now()))
+    const [duration, setDuration] = useState(
+        initial?.endTime && initial.startTime ? String(Math.round((initial.endTime - initial.startTime) / 60000)) : ""
+    )
+    const [amount, setAmount] = useState(initial?.details?.amount != null ? String(initial.details.amount) : "")
+    const [notes, setNotes] = useState(String(initial?.details?.notes ?? ""))
+    const [error, setError] = useState("")
+
+    const unit = amountUnitFor(type, subtype)
+    const ongoingSleep = isEditing && initial?.type === "SLEEP" && !initial.endTime
+
+    const pickType = (t: LogType) => {
+        setType(t)
+        setSubtype(t === "SLEEP" ? guessSleepSubtype() : getCategory(t).subtypes[0].value)
     }
 
-    // Adjust type for form if it's a food subtype
-    if (defaultValues?.subtype === 'puree' || defaultValues?.subtype === 'whole') {
-        formDefaults.type = 'food'
-    }
+    const save = async () => {
+        const startTime = fromLocalInput(start)
+        if (Number.isNaN(startTime)) return setError("Pick a valid time")
+        if (startTime > Date.now() + 60_000) return setError("That time is in the future")
+        const mins = duration === "" ? undefined : Number(duration)
+        if (mins !== undefined && (Number.isNaN(mins) || mins < 0)) return setError("Duration must be a positive number")
+        const amt = amount === "" ? undefined : Number(amount)
+        if (amt !== undefined && Number.isNaN(amt)) return setError("Amount must be a number")
 
-    const { register, handleSubmit, setValue, watch, reset } = useForm({
-        defaultValues: formDefaults
-    })
-
-    // Watch type to conditionally render food options
-    const feedType = watch('type')
-    const foodType = watch('foodType')
-
-    // Reset form when defaultValues changes (e.g. switching between add/edit)
-    useEffect(() => {
-        reset(formDefaults)
-    }, [defaultValues])
-
-    const onSubmit = (data: any) => {
-        let subtype = data.type
-        // If type is food, use the foodType as the actual subtype or keep 'food' and details?
-        // User requested subsection: Puree, Whole. 
-        if (data.type === 'food') {
-            subtype = data.foodType // 'puree' or 'whole'
-        }
-
-        onSave({
-            type: 'FEED',
-            subtype: subtype,
+        const log: Omit<Log, "id"> = {
+            type,
+            subtype,
+            startTime,
+            // No duration = still going (e.g. a sleep you forgot to start on time)
+            endTime: mins !== undefined && category.timed ? startTime + mins * 60000 : undefined,
             details: {
-                amount: data.amount,
-                unit: (subtype === 'puree' || subtype === 'whole') ? 'qty' : 'oz',
-                notes: data.notes
-            }
-        })
-        if (!defaultValues) reset() // Only reset if adding new
+                ...(amt !== undefined && unit ? { amount: amt, unit } : {}),
+                ...(notes.trim() ? { notes: notes.trim() } : {}),
+            },
+            createdAt: initial?.createdAt ?? Date.now(),
+        }
+        try {
+            if (isEditing) await db.logs.put({ ...log, id: initial!.id! })
+            else await db.logs.add(log)
+            onDone()
+        } catch (e) {
+            console.error("Failed to save log:", e)
+            setError("Couldn't save — try again")
+        }
+    }
+
+    const remove = async () => {
+        if (!initial?.id) return
+        if (!confirm("Delete this entry?")) return
+        await db.logs.delete(initial.id)
+        onDone()
     }
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="flex gap-2">
-                <Button
-                    type="button"
-                    variant={feedType === 'bottle' ? 'default' : 'outline'}
-                    onClick={() => setValue('type', 'bottle')}
-                    className="flex-1"
-                >
-                    Bottle
-                </Button>
-                <Button
-                    type="button"
-                    variant={feedType === 'breast' ? 'default' : 'outline'}
-                    onClick={() => setValue('type', 'breast')}
-                    className="flex-1"
-                >
-                    Nursing
-                </Button>
-                <Button
-                    type="button"
-                    variant={feedType === 'food' ? 'default' : 'outline'}
-                    onClick={() => setValue('type', 'food')}
-                    className="flex-1"
-                >
-                    Food
-                </Button>
-            </div>
-
-            {feedType === 'food' && (
-                <div className="p-3 bg-secondary/50 rounded-lg space-y-2 animate-in fade-in slide-in-from-top-2">
-                    <Label>Food Type</Label>
-                    <div className="flex gap-2">
-                        <Button
+        <div className="px-4 pb-6 space-y-5">
+            {!isEditing && (
+                <div className="grid grid-cols-4 gap-2" role="radiogroup" aria-label="Category">
+                    {CATEGORIES.map(c => (
+                        <button
+                            key={c.type}
                             type="button"
-                            size="sm"
-                            variant={foodType === 'puree' ? 'default' : 'outline'}
-                            onClick={() => setValue('foodType', 'puree')}
-                            className="flex-1"
+                            role="radio"
+                            aria-checked={type === c.type}
+                            onClick={() => pickType(c.type)}
+                            className="finals-tile flex flex-col items-center gap-1 py-3"
+                            data-active={type === c.type}
+                            style={{ "--tile": c.color } as React.CSSProperties}
                         >
-                            Puree
-                        </Button>
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant={foodType === 'whole' ? 'default' : 'outline'}
-                            onClick={() => setValue('foodType', 'whole')}
-                            className="flex-1"
-                        >
-                            Whole
-                        </Button>
-                    </div>
+                            <span className="material-symbols-outlined text-[26px]">{c.icon}</span>
+                            <span className="text-xs font-bold uppercase tracking-wider">{c.label}</span>
+                        </button>
+                    ))}
                 </div>
             )}
 
-            <div className="space-y-2">
-                <Label htmlFor="amount">Amount {feedType === 'food' ? '(qty/oz)' : '(oz)'}</Label>
-                <Input id="amount" type="number" step="0.5" {...register("amount")} placeholder="4.0" />
-            </div>
-
-            <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea id="notes" {...register("notes")} placeholder="Details..." />
-            </div>
-
-            <Button type="submit" className="w-full">Save Feed</Button>
-        </form>
-    )
-}
-
-function MedicineForm({ onSave, defaultValues }: { onSave: (data: any) => void, defaultValues?: any }) {
-    const formDefaults = {
-        brand: defaultValues?.subtype || 'motrin',
-        kind: defaultValues?.details?.kind || 'infant',
-        amount: defaultValues?.details?.amount || '',
-        notes: defaultValues?.details?.notes || ''
-    }
-
-    const { register, handleSubmit, setValue, watch, reset } = useForm({
-        defaultValues: formDefaults
-    })
-
-    const brand = watch('brand')
-    const kind = watch('kind')
-
-    useEffect(() => {
-        reset(formDefaults)
-    }, [defaultValues])
-
-    const onSubmit = (data: any) => {
-        onSave({
-            type: 'MEDICINE',
-            subtype: data.brand,
-            details: {
-                kind: data.kind,
-                amount: data.amount,
-                unit: 'mL',
-                notes: data.notes
-            }
-        })
-        if (!defaultValues) reset()
-    }
-
-    return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-2">
-                <Label>Brand</Label>
-                <div className="flex gap-2">
-                    <Button
-                        type="button"
-                        variant={brand === 'motrin' ? 'default' : 'outline'}
-                        onClick={() => setValue('brand', 'motrin')}
-                        className="flex-1"
-                    >
-                        Motrin
-                    </Button>
-                    <Button
-                        type="button"
-                        variant={brand === 'tylenol' ? 'default' : 'outline'}
-                        onClick={() => setValue('brand', 'tylenol')}
-                        className="flex-1"
-                    >
-                        Tylenol
-                    </Button>
+            <fieldset>
+                <legend className="finals-label mb-2">{category.label}: what kind?</legend>
+                <div className="flex flex-wrap gap-2">
+                    {category.subtypes.map(s => (
+                        <button
+                            key={s.value}
+                            type="button"
+                            onClick={() => setSubtype(s.value)}
+                            className="finals-chip"
+                            data-active={subtype === s.value}
+                            style={{ "--tile": category.color } as React.CSSProperties}
+                        >
+                            <span className="material-symbols-outlined text-[18px]">{s.icon}</span>
+                            {s.label}
+                        </button>
+                    ))}
                 </div>
-            </div>
+            </fieldset>
 
-            <div className="space-y-2">
-                <Label>Kind</Label>
-                <div className="flex gap-2">
-                    <Button
-                        type="button"
-                        variant={kind === 'infant' ? 'default' : 'outline'}
-                        onClick={() => setValue('kind', 'infant')}
-                        className="flex-1"
-                    >
-                        Infant
-                    </Button>
-                    <Button
-                        type="button"
-                        variant={kind === 'children' ? 'default' : 'outline'}
-                        onClick={() => setValue('kind', 'children')}
-                        className="flex-1"
-                    >
-                        Children's
-                    </Button>
+            <div className="grid grid-cols-2 gap-3">
+                <label className="block col-span-2">
+                    <span className="finals-label">{category.timed ? "Started" : "When"}</span>
+                    <input type="datetime-local" value={start} onChange={e => setStart(e.target.value)} className="finals-input" />
+                </label>
+                {category.timed && !ongoingSleep && (
+                    <label className="block">
+                        <span className="finals-label">How long (min)</span>
+                        <input type="number" inputMode="numeric" min={0} value={duration} onChange={e => setDuration(e.target.value)} placeholder={type === "SLEEP" ? "still asleep" : "30"} className="finals-input" />
+                    </label>
+                )}
+                {unit && (
+                    <label className="block">
+                        <span className="finals-label">Amount ({unit})</span>
+                        <input type="number" inputMode="decimal" step="0.1" value={amount} onChange={e => setAmount(e.target.value)} placeholder={unit === "°F" ? "98.6" : "4"} className="finals-input" />
+                    </label>
+                )}
+            </div>
+            {category.timed && !ongoingSleep && (
+                <div className="flex flex-wrap gap-2 -mt-2">
+                    {[15, 30, 45, 60, 90, 120].map(m => (
+                        <button key={m} type="button" className="finals-chip text-xs" data-active={duration === String(m)} onClick={() => setDuration(String(m))}>
+                            {m < 60 ? `${m}m` : `${m / 60}h`}
+                        </button>
+                    ))}
                 </div>
+            )}
+
+            <label className="block">
+                <span className="finals-label">Notes</span>
+                <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder={category.notesPlaceholder} rows={2} className="finals-input resize-none" />
+            </label>
+
+            {error && <p role="alert" className="text-sm font-semibold text-[var(--finals-red)]">{error}</p>}
+
+            <div className="flex gap-3">
+                {isEditing && (
+                    <button type="button" onClick={remove} className="finals-btn finals-btn-ghost" aria-label="Delete entry">
+                        <span className="material-symbols-outlined">delete</span>
+                    </button>
+                )}
+                <button type="button" onClick={onDone} className="finals-btn finals-btn-ghost flex-1">Cancel</button>
+                <button type="button" onClick={save} className="finals-btn finals-btn-primary flex-[2]">
+                    {isEditing ? "Save changes" : `Save ${category.label}`}
+                </button>
             </div>
-
-            <div className="space-y-2">
-                <Label htmlFor="amount">Amount (mL)</Label>
-                <Input id="amount" type="number" step="0.1" {...register("amount")} placeholder="2.5" />
-            </div>
-
-            <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea id="notes" {...register("notes")} placeholder="Details..." />
-            </div>
-
-            <Button type="submit" className="w-full">Save Medicine</Button>
-        </form>
-    )
-}
-
-function ActivityForm({ onSave, defaultValues }: { onSave: (data: any) => void, defaultValues?: any }) {
-    const formDefaults = {
-        type: defaultValues?.subtype || 'play_inside',
-        notes: defaultValues?.details?.notes || ''
-    }
-
-    const { register, handleSubmit, setValue, watch, reset } = useForm({
-        defaultValues: formDefaults
-    })
-    const activityType = watch('type')
-
-    useEffect(() => {
-        reset(formDefaults)
-    }, [defaultValues])
-
-    const onSubmit = (data: any) => {
-        onSave({
-            type: 'ACTIVITY',
-            subtype: data.type,
-            details: { notes: data.notes }
-        })
-        if (!defaultValues) reset()
-    }
-
-    return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="flex flex-col gap-2">
-                <Button
-                    type="button"
-                    variant={activityType === 'play_inside' ? 'default' : 'outline'}
-                    onClick={() => setValue('type', 'play_inside')}
-                >
-                    Play Inside
-                </Button>
-                <Button
-                    type="button"
-                    variant={activityType === 'play_outside' ? 'default' : 'outline'}
-                    onClick={() => setValue('type', 'play_outside')}
-                >
-                    Play Outside
-                </Button>
-                <Button
-                    type="button"
-                    variant={activityType === 'bath' ? 'default' : 'outline'}
-                    onClick={() => setValue('type', 'bath')}
-                >
-                    Bath
-                </Button>
-            </div>
-
-            <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea id="notes" {...register("notes")} placeholder="Details..." />
-            </div>
-
-            <Button type="submit" className="w-full">Save Activity</Button>
-        </form>
-    )
-}
-
-function DiaperForm({ onSave, defaultValues }: { onSave: (data: any) => void, defaultValues?: any }) {
-    const formDefaults = {
-        type: defaultValues?.subtype || 'pee',
-        notes: defaultValues?.details?.notes || ''
-    }
-
-    const { register, handleSubmit, setValue, watch, reset } = useForm({
-        defaultValues: formDefaults
-    })
-    const diaperType = watch('type')
-
-    useEffect(() => {
-        reset(formDefaults)
-    }, [defaultValues])
-
-    const onSubmit = (data: any) => {
-        onSave({
-            type: 'DIAPER',
-            subtype: data.type,
-            details: { notes: data.notes }
-        })
-        if (!defaultValues) reset()
-    }
-
-    return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-3 gap-2">
-                <Button
-                    type="button"
-                    variant={diaperType === 'pee' ? 'default' : 'outline'}
-                    onClick={() => setValue('type', 'pee')}
-                >
-                    Pee
-                </Button>
-                <Button
-                    type="button"
-                    variant={diaperType === 'poop' ? 'default' : 'outline'}
-                    onClick={() => setValue('type', 'poop')}
-                >
-                    Poop
-                </Button>
-                <Button
-                    type="button"
-                    variant={diaperType === 'both' ? 'default' : 'outline'}
-                    onClick={() => setValue('type', 'both')}
-                >
-                    Both
-                </Button>
-            </div>
-
-            <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea id="notes" {...register("notes")} placeholder="Color, consistency..." />
-            </div>
-
-            <Button type="submit" className="w-full">Save Diaper</Button>
-        </form>
+        </div>
     )
 }

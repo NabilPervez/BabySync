@@ -1,11 +1,12 @@
 "use client"
 
+import type { Log } from "@/lib/db"
 import { useMemo } from "react"
 import { ScatterChart, Scatter, XAxis, YAxis, ZAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import { format } from "date-fns"
 
 interface SleepTimesChartProps {
-    data: any[]
+    data: Log[]
     period: 'week' | 'month'
 }
 
