@@ -55,19 +55,23 @@ function LogForm({ initial, onDone }: { initial?: Partial<Log>, onDone: () => vo
     const [subtype, setSubtype] = useState<string>(
         initial?.subtype ?? (type === "SLEEP" ? guessSleepSubtype() : category.subtypes[0].value)
     )
+    const [subtypePicked, setSubtypePicked] = useState(!!initial?.subtype)
     const [start, setStart] = useState(() => toLocalInput(initial?.startTime ?? Date.now()))
     const [duration, setDuration] = useState(
         initial?.endTime && initial.startTime ? String(Math.round((initial.endTime - initial.startTime) / 60000)) : ""
     )
+    // Sleep uses a start + end time instead of minutes; blank end = still asleep
+    const [end, setEnd] = useState(() => initial?.endTime ? toLocalInput(initial.endTime) : "")
     const [amount, setAmount] = useState(initial?.details?.amount != null ? String(initial.details.amount) : "")
     const [notes, setNotes] = useState(String(initial?.details?.notes ?? ""))
     const [error, setError] = useState("")
 
     const unit = amountUnitFor(type, subtype)
-    const ongoingSleep = isEditing && initial?.type === "SLEEP" && !initial.endTime
+    const isSleep = type === "SLEEP"
 
     const pickType = (t: LogType) => {
         setType(t)
+        setSubtypePicked(false)
         setSubtype(t === "SLEEP" ? guessSleepSubtype() : getCategory(t).subtypes[0].value)
     }
 
@@ -77,15 +81,26 @@ function LogForm({ initial, onDone }: { initial?: Partial<Log>, onDone: () => vo
         if (startTime > Date.now() + 60_000) return setError("That time is in the future")
         const mins = duration === "" ? undefined : Number(duration)
         if (mins !== undefined && (Number.isNaN(mins) || mins < 0)) return setError("Duration must be a positive number")
+        let endTime: number | undefined
+        if (isSleep) {
+            if (end) {
+                endTime = fromLocalInput(end)
+                if (Number.isNaN(endTime)) return setError("Pick a valid wake-up time")
+                if (endTime <= startTime) return setError("Woke up must be after fell asleep")
+                if (endTime > Date.now() + 60_000) return setError("Wake-up time is in the future")
+            }
+        } else if (mins !== undefined && category.timed) {
+            endTime = startTime + mins * 60000
+        }
         const amt = amount === "" ? undefined : Number(amount)
         if (amt !== undefined && Number.isNaN(amt)) return setError("Amount must be a number")
 
         const log: Omit<Log, "id"> = {
             type,
-            subtype,
+            // Nap vs night follows the time they fell asleep unless chosen explicitly
+            subtype: isSleep && !subtypePicked ? guessSleepSubtype(startTime) : subtype,
             startTime,
-            // No duration = still going (e.g. a sleep you forgot to start on time)
-            endTime: mins !== undefined && category.timed ? startTime + mins * 60000 : undefined,
+            endTime,
             details: {
                 ...(amt !== undefined && unit ? { amount: amt, unit } : {}),
                 ...(notes.trim() ? { notes: notes.trim() } : {}),
@@ -138,7 +153,7 @@ function LogForm({ initial, onDone }: { initial?: Partial<Log>, onDone: () => vo
                         <button
                             key={s.value}
                             type="button"
-                            onClick={() => setSubtype(s.value)}
+                            onClick={() => { setSubtype(s.value); setSubtypePicked(true) }}
                             className="finals-chip"
                             data-active={subtype === s.value}
                             style={{ "--tile": category.color } as React.CSSProperties}
@@ -152,13 +167,22 @@ function LogForm({ initial, onDone }: { initial?: Partial<Log>, onDone: () => vo
 
             <div className="grid grid-cols-2 gap-3">
                 <label className="block col-span-2">
-                    <span className="finals-label">{category.timed ? "Started" : "When"}</span>
+                    <span className="finals-label">{isSleep ? "Fell asleep" : category.timed ? "Started" : "When"}</span>
                     <input type="datetime-local" value={start} onChange={e => setStart(e.target.value)} className="finals-input" />
                 </label>
-                {category.timed && !ongoingSleep && (
+                {isSleep && (
+                    <label className="block col-span-2">
+                        <span className="finals-label">Woke up <span className="normal-case tracking-normal">(leave blank if still asleep)</span></span>
+                        <div className="flex gap-2">
+                            <input type="datetime-local" value={end} onChange={e => setEnd(e.target.value)} className="finals-input" />
+                            <button type="button" onClick={() => setEnd(toLocalInput(Date.now()))} className="finals-btn finals-btn-ghost mt-[0.35rem] text-sm">Now</button>
+                        </div>
+                    </label>
+                )}
+                {category.timed && !isSleep && (
                     <label className="block">
                         <span className="finals-label">How long (min)</span>
-                        <input type="number" inputMode="numeric" min={0} value={duration} onChange={e => setDuration(e.target.value)} placeholder={type === "SLEEP" ? "still asleep" : "30"} className="finals-input" />
+                        <input type="number" inputMode="numeric" min={0} value={duration} onChange={e => setDuration(e.target.value)} placeholder="30" className="finals-input" />
                     </label>
                 )}
                 {unit && (
@@ -168,7 +192,7 @@ function LogForm({ initial, onDone }: { initial?: Partial<Log>, onDone: () => vo
                     </label>
                 )}
             </div>
-            {category.timed && !ongoingSleep && (
+            {category.timed && !isSleep && (
                 <div className="flex flex-wrap gap-2 -mt-2">
                     {[15, 30, 45, 60, 90, 120].map(m => (
                         <button key={m} type="button" className="finals-chip text-xs" data-active={duration === String(m)} onClick={() => setDuration(String(m))}>

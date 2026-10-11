@@ -1,43 +1,75 @@
 import { format, startOfDay } from "date-fns"
 import type { Log } from "@/lib/db"
-import { CATEGORIES, formatMinutes, logSummary, logTitle } from "@/lib/log-types"
+import { formatMinutes, logSummary, logTitle } from "@/lib/log-types"
+
+export const APP_URL = "https://babysync.netlify.app"
+
+const TYPE_EMOJI: Record<string, string> = {
+    FEED: "🍽️", SLEEP: "😴", ACTIVITY: "🧸", DIAPER: "🚽", MEDICINE: "💊", HEALTH: "🩺", MOOD: "💬",
+}
+const SUB_EMOJI: Record<string, string> = {
+    breakfast: "🥣", lunch: "🥪", dinner: "🍝", snack: "🍎", milk: "🥛", water: "💧", bottle: "🍼",
+    walk: "🚶", play_outside: "🌳", playground: "🛝", reading: "📚", music: "🎵", art: "🎨",
+    playdate: "👫", class: "🏫", screen: "📺", bath: "🛁",
+    pee: "💧", poop: "💩", both: "💩", potty_pee: "🚽", potty_poop: "🚽", accident: "⚠️",
+    temperature: "🌡️", teeth: "🪥", happy: "😄", tantrum: "😤", cranky: "😣", milestone: "🏆", new_word: "🗣️",
+    night: "🌙", nap: "😴",
+}
+
+export function emojiFor(log: Pick<Log, "type" | "subtype">) {
+    return (log.subtype && SUB_EMOJI[log.subtype]) || TYPE_EMOJI[log.type] || "•"
+}
+
+function line(l: Log) {
+    // Sleep reads better as a range: "1:00 PM–2:30 PM Nap (1h 30m)"
+    if (l.type === "SLEEP") {
+        const range = l.endTime ? `${format(l.startTime, "h:mm a")}–${format(l.endTime, "h:mm a")}` : `${format(l.startTime, "h:mm a")}`
+        const what = l.endTime ? `${logTitle(l)} (${formatMinutes((l.endTime - l.startTime) / 60000)})` : `${logTitle(l)}`
+        return `${emojiFor(l)} ${range}  ${what}`
+    }
+    const s = logSummary(l)
+    return `${emojiFor(l)} ${format(l.startTime, "h:mm a")}  ${logTitle(l)}${s ? ` – ${s}` : ""}`
+}
+
+const footer = `\n— sent from BabySync ${APP_URL}`
 
 /** A short message describing a single entry. */
 export function singleUpdate(log: Log, babyName?: string): string {
-    const who = babyName || "Baby"
-    const summary = logSummary(log)
-    return `${who} update · ${format(log.startTime, "h:mm a")}\n${logTitle(log)}${summary ? ` — ${summary}` : ""}`
+    return `${babyName || "Baby"} update:\n${line(log)}${footer}`
 }
 
-/** A summary of everything logged today, grouped by category. */
+/** Today's recap: headline totals, then every entry in time order. */
 export function dailyUpdate(logs: Log[], babyName?: string, now = Date.now()): string {
     const who = babyName || "Baby"
+    const dayStart = startOfDay(now).getTime()
     const today = logs
-        .filter(l => l.startTime >= startOfDay(now).getTime() && l.startTime <= now)
+        .filter(l => (l.startTime >= dayStart || (l.endTime ?? Infinity) >= dayStart) && l.startTime <= now)
         .sort((a, b) => a.startTime - b.startTime)
 
-    const lines = [`${who}'s day so far (${format(now, "EEE MMM d, h:mm a")})`]
-
-    const sleeping = logs.find(l => l.type === "SLEEP" && !l.endTime)
-    if (sleeping) lines.push(`Sleeping now — since ${format(sleeping.startTime, "h:mm a")}`)
-
     const sleepMins = today
-        .filter(l => l.type === "SLEEP" && l.endTime)
-        .reduce((sum, l) => sum + (l.endTime! - l.startTime) / 60000, 0)
-    if (sleepMins > 0) lines.push(`Total sleep today: ${formatMinutes(sleepMins)}`)
+        .filter(l => l.type === "SLEEP")
+        .reduce((sum, l) => sum + ((l.endTime ?? now) - Math.max(l.startTime, dayStart)) / 60000, 0)
+    const meals = today.filter(l => l.type === "FEED" && l.startTime >= dayStart).length
+    const potty = today.filter(l => l.type === "DIAPER" && l.startTime >= dayStart).length
+    const playMins = today
+        .filter(l => l.type === "ACTIVITY" && l.startTime >= dayStart)
+        .reduce((sum, l) => sum + ((l.endTime ?? now) - l.startTime) / 60000, 0)
 
-    for (const cat of CATEGORIES) {
-        const entries = today.filter(l => l.type === cat.type)
-        if (entries.length === 0) continue
-        lines.push("", `${cat.label.toUpperCase()} (${entries.length})`)
-        for (const l of entries) {
-            const s = logSummary(l)
-            lines.push(`• ${format(l.startTime, "h:mm a")} ${logTitle(l)}${s ? ` — ${s}` : ""}`)
-        }
-    }
+    const totals = [
+        sleepMins > 0 && `😴 ${formatMinutes(sleepMins)} sleep`,
+        meals > 0 && `🍽️ ${meals} ${meals === 1 ? "meal" : "meals"}`,
+        potty > 0 && `🚽 ${potty} potty`,
+        playMins > 0 && `🧸 ${formatMinutes(playMins)} play`,
+    ].filter(Boolean)
 
-    if (today.length === 0 && !sleeping) lines.push("Nothing logged yet today.")
-    return lines.join("\n")
+    const out = [`${who}'s day – ${format(now, "EEE MMM d")}`]
+    if (totals.length) out.push(totals.join(" · "))
+    const sleeping = today.find(l => l.type === "SLEEP" && !l.endTime)
+    if (sleeping) out.push(`➡️ Sleeping now (since ${format(sleeping.startTime, "h:mm a")})`)
+    out.push("")
+    if (today.length === 0) out.push("Nothing logged yet today.")
+    else out.push(...today.map(line))
+    return out.join("\n") + "\n" + footer
 }
 
 function digits(phone?: string) {
@@ -45,8 +77,7 @@ function digits(phone?: string) {
 }
 
 export function whatsappUrl(text: string, phone?: string) {
-    const p = digits(phone)
-    return `https://wa.me/${p}?text=${encodeURIComponent(text)}`
+    return `https://wa.me/${digits(phone)}?text=${encodeURIComponent(text)}`
 }
 
 /** iOS uses `&body=`, Android `?body=`; `?&body=` works on both. */

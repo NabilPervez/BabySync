@@ -1,9 +1,9 @@
 "use client"
 
 import { useLiveQuery } from "dexie-react-hooks"
-import { format, formatDistanceToNowStrict } from "date-fns"
+import { format, formatDistanceToNowStrict, startOfDay } from "date-fns"
 import { db, latestOfType, type LogType } from "@/lib/db"
-import { MED_INTERVAL_HOURS, getCategory } from "@/lib/log-types"
+import { MED_INTERVAL_HOURS, formatMinutes, getCategory } from "@/lib/log-types"
 import { useNow } from "@/components/LiveStateCard"
 
 const TILES: { type: LogType, label: string }[] = [
@@ -24,6 +24,24 @@ export function LastActivityStats({ onQuickLog }: { onQuickLog?: (type: LogType)
         db.logs.where("[type+startTime]").between(["MEDICINE", Date.now() - 8 * 3600_000], ["MEDICINE", Infinity]).toArray()
     )
 
+    // Everything touching today (incl. last night's sleep that ended this morning)
+    const dayStart = startOfDay(now).getTime()
+    const recent = useLiveQuery(
+        () => db.logs.where("startTime").above(dayStart - 18 * 3600_000).toArray(),
+        [dayStart]
+    )
+    const today = (recent ?? []).filter(l => l.startTime >= dayStart || (l.endTime ?? now) >= dayStart)
+    const span = (types: string[]) => today
+        .filter(l => types.includes(l.type))
+        .reduce((sum, l) => sum + ((l.endTime ?? now) - Math.max(l.startTime, dayStart)) / 60000, 0)
+    const count = (t: string) => today.filter(l => l.type === t && l.startTime >= dayStart).length
+    const totals = [
+        { label: "Sleep", value: formatMinutes(span(["SLEEP"])), color: "var(--finals-pink)" },
+        { label: "Meals", value: String(count("FEED")), color: "var(--finals-yellow)" },
+        { label: "Potty", value: String(count("DIAPER")), color: "var(--finals-white)" },
+        { label: "Play", value: formatMinutes(span(["ACTIVITY"])), color: "var(--finals-cyan)" },
+    ]
+
     const latestByMed = new Map<string, number>()
     for (const m of recentMeds ?? []) {
         if (!m.subtype || !MED_INTERVAL_HOURS[m.subtype]) continue
@@ -35,6 +53,14 @@ export function LastActivityStats({ onQuickLog }: { onQuickLog?: (type: LogType)
 
     return (
         <div className="space-y-3">
+            <section aria-label="Today so far" className="finals-card grid grid-cols-4 divide-x divide-[var(--finals-line)]">
+                {totals.map(t => (
+                    <div key={t.label} className="py-3 text-center">
+                        <span className="finals-heading block text-2xl tabular-nums" style={{ color: t.color }}>{t.value}</span>
+                        <span className="finals-label block mt-1">{t.label} today</span>
+                    </div>
+                ))}
+            </section>
             {waits.map(w => {
                 const mins = Math.ceil((w.nextAt - now) / 60000)
                 return (

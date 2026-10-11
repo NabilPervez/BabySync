@@ -61,6 +61,9 @@ export function LiveStateCard() {
                     <p className="finals-heading text-5xl tabular-nums mt-1" aria-live="off">
                         {since ? clock(now - since) : "--:--"}
                     </p>
+                    {isSleeping && now - since! > 14 * 3600_000 && (
+                        <p className="text-xs font-semibold text-[var(--finals-yellow)] mt-1">Over 14h — forgot to tap &ldquo;Woke up&rdquo;? Edit it in the timeline.</p>
+                    )}
                     {!since && <p className="text-xs text-[var(--finals-muted)] mt-1">Tap the button when they fall asleep</p>}
                 </div>
             </div>
@@ -77,6 +80,7 @@ export function LiveStateCard() {
                             <span className="material-symbols-outlined text-[var(--finals-cyan)]">{getSubtype(a)?.icon ?? "toys"}</span>
                             <span className="flex-1 font-bold uppercase tracking-wide text-sm">
                                 {getSubtype(a)?.label ?? "Activity"} · <span className="tabular-nums">{formatMinutes((now - a.startTime) / 60000)}</span>
+                                {now - a.startTime > 3 * 3600_000 && <span className="block text-[11px] normal-case tracking-normal text-[var(--finals-yellow)]">Still going? Tap Done</span>}
                             </span>
                             <button onClick={() => stop(a.id)} className="finals-chip" data-active="true" style={{ "--tile": "var(--finals-cyan)" } as React.CSSProperties}>
                                 Done

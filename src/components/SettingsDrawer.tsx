@@ -7,7 +7,8 @@ import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } f
 import { db, type Baby } from "@/lib/db"
 
 export function SettingsDrawer({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
-    const baby = useLiveQuery(() => db.babies.limit(1).first())
+    // Wrap in an object: a missing profile (undefined) must not look like "still loading"
+    const loaded = useLiveQuery(async () => ({ baby: await db.babies.limit(1).first() }))
     return (
         <Drawer open={open} onOpenChange={onOpenChange}>
             <DrawerContent className="finals-drawer">
@@ -16,7 +17,7 @@ export function SettingsDrawer({ open, onOpenChange }: { open: boolean, onOpenCh
                         <DrawerTitle className="finals-heading text-2xl">Settings</DrawerTitle>
                         <DrawerDescription className="sr-only">Profile and data</DrawerDescription>
                     </DrawerHeader>
-                    {open && baby !== undefined && <SettingsForm key={baby?.id ?? "new"} baby={baby} onDone={() => onOpenChange(false)} />}
+                    {open && loaded && <SettingsForm key={loaded.baby?.id ?? "new"} baby={loaded.baby} onDone={() => onOpenChange(false)} />}
                 </div>
             </DrawerContent>
         </Drawer>
