@@ -6,7 +6,7 @@ import { SettingsDrawer } from "@/components/SettingsDrawer"
 
 const LINKS = [
     { href: "/", icon: "home", label: "Today" },
-    { href: "/trends", icon: "bar_chart", label: "Trends" },
+    { href: "/trends", icon: "insights", label: "Analytics" },
     { href: "/calendar", icon: "calendar_month", label: "History" },
 ]
 

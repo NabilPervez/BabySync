@@ -6,10 +6,10 @@ import { useNow } from "@/components/LiveStateCard"
 import { formatMinutes, getCategory } from "@/lib/log-types"
 
 /** Time spent per activity (walks, play, reading...) over the period. */
-export function ActivityBreakdown({ data, period }: { data: Log[], period: "week" | "month" }) {
+export function ActivityBreakdown({ data, days }: { data: Log[], days: number }) {
     const now = useNow(60_000)
     const rows = useMemo(() => {
-        const since = now - (period === "week" ? 7 : 30) * 86400_000
+        const since = now - days * 86400_000
         const totals = new Map<string, { count: number, mins: number }>()
         for (const l of data) {
             if (l.type !== "ACTIVITY" || l.startTime < since) continue
@@ -22,7 +22,7 @@ export function ActivityBreakdown({ data, period }: { data: Log[], period: "week
         return [...totals.entries()]
             .map(([sub, t]) => ({ ...t, sub: subs.find(s => s.value === sub) ?? { value: sub, label: sub, icon: "toys" } }))
             .sort((a, b) => b.mins - a.mins || b.count - a.count)
-    }, [data, period, now])
+    }, [data, days, now])
 
     const max = Math.max(1, ...rows.map(r => r.mins))
 

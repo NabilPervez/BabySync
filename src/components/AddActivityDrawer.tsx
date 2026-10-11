@@ -9,7 +9,8 @@ import {
     DrawerTitle,
     DrawerDescription,
 } from "@/components/ui/drawer"
-import { db, type Log, type LogType } from "@/lib/db"
+import { type Log, type LogType } from "@/lib/db"
+import { addLog, deleteLog, replaceLog, type NewLog } from "@/lib/data"
 import { CATEGORIES, amountUnitFor, getCategory, guessSleepSubtype } from "@/lib/log-types"
 
 interface AddActivityDrawerProps {
@@ -95,7 +96,7 @@ function LogForm({ initial, onDone }: { initial?: Partial<Log>, onDone: () => vo
         const amt = amount === "" ? undefined : Number(amount)
         if (amt !== undefined && Number.isNaN(amt)) return setError("Amount must be a number")
 
-        const log: Omit<Log, "id"> = {
+        const log: NewLog = {
             type,
             // Nap vs night follows the time they fell asleep unless chosen explicitly
             subtype: isSleep && !subtypePicked ? guessSleepSubtype(startTime) : subtype,
@@ -108,8 +109,8 @@ function LogForm({ initial, onDone }: { initial?: Partial<Log>, onDone: () => vo
             createdAt: initial?.createdAt ?? Date.now(),
         }
         try {
-            if (isEditing) await db.logs.put({ ...log, id: initial!.id! })
-            else await db.logs.add(log)
+            if (isEditing) await replaceLog(initial as Log, log)
+            else await addLog(log)
             onDone()
         } catch (e) {
             console.error("Failed to save log:", e)
@@ -120,7 +121,7 @@ function LogForm({ initial, onDone }: { initial?: Partial<Log>, onDone: () => vo
     const remove = async () => {
         if (!initial?.id) return
         if (!confirm("Delete this entry?")) return
-        await db.logs.delete(initial.id)
+        await deleteLog(initial as Log)
         onDone()
     }
 

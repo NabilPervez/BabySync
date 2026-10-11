@@ -4,7 +4,10 @@ import { useState } from "react"
 import { useLiveQuery } from "dexie-react-hooks"
 import { format } from "date-fns"
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
-import { db, type Baby } from "@/lib/db"
+import { db, newUid, type Baby, type Log } from "@/lib/db"
+import { clearLocal, saveProfile } from "@/lib/data"
+import { getSyncCode, leaveFamily, requestSync } from "@/lib/sync"
+import { FamilySync } from "@/components/FamilySync"
 
 export function SettingsDrawer({ open, onOpenChange }: { open: boolean, onOpenChange: (o: boolean) => void }) {
     // Wrap in an object: a missing profile (undefined) must not look like "still loading"
@@ -36,8 +39,7 @@ function SettingsForm({ baby, onDone }: { baby: Baby | undefined, onDone: () => 
             dob: dob ? new Date(`${dob}T00:00`).getTime() : 0,
             sharePhone: phone.trim(),
         }
-        if (baby) await db.babies.update(baby.id, data)
-        else await db.babies.add(data)
+        await saveProfile(baby, data)
         onDone()
     }
 
@@ -54,13 +56,21 @@ function SettingsForm({ baby, onDone }: { baby: Baby | undefined, onDone: () => 
         try {
             const parsed = JSON.parse(await file.text())
             if (!Array.isArray(parsed.logs)) throw new Error("No logs in file")
-            if (!confirm(`Replace current data with ${parsed.logs.length} entries from this backup?`)) return
+            if (!confirm(`Add ${parsed.logs.length} entries from this backup? Entries you already have are skipped.`)) return
+            const now = Date.now()
             await db.transaction("rw", db.logs, db.babies, async () => {
-                await db.logs.clear()
-                await db.babies.clear()
-                await db.logs.bulkAdd(parsed.logs)
-                if (Array.isArray(parsed.babies)) await db.babies.bulkAdd(parsed.babies)
+                const have = new Set((await db.logs.toArray()).map(l => l.uid))
+                // Older backups have no uid; give them one. Drop local ids so they don't collide.
+                const rows = (parsed.logs as Log[])
+                    .map(({ id: _id, ...l }) => ({ ...l, uid: l.uid ?? newUid(), updatedAt: now }))
+                    .filter(l => !have.has(l.uid))
+                await db.logs.bulkAdd(rows as Log[])
+                if (!(await db.babies.count()) && parsed.babies?.[0]) {
+                    const { id: _id, ...b } = parsed.babies[0]
+                    await db.babies.add({ ...b, updatedAt: now })
+                }
             })
+            requestSync()
             onDone()
         } catch (e) {
             alert(`Couldn't import that file: ${(e as Error).message}`)
@@ -68,9 +78,13 @@ function SettingsForm({ baby, onDone }: { baby: Baby | undefined, onDone: () => 
     }
 
     const clearAll = async () => {
-        if (!confirm("Delete ALL entries and the profile? Export a backup first if you might want them.")) return
-        await db.logs.clear()
-        await db.babies.clear()
+        const synced = !!getSyncCode()
+        const msg = synced
+            ? "Erase everything on THIS phone and disconnect from family sync? The other phone keeps its data."
+            : "Delete ALL entries and the profile? Export a backup first if you might want them."
+        if (!confirm(msg)) return
+        if (synced) leaveFamily()
+        await clearLocal()
         onDone()
     }
 
@@ -91,6 +105,8 @@ function SettingsForm({ baby, onDone }: { baby: Baby | undefined, onDone: () => 
             </label>
             <button onClick={save} className="finals-btn finals-btn-primary w-full">Save</button>
 
+            <FamilySync />
+
             <div className="pt-4 border-t border-[var(--finals-line)] grid grid-cols-2 gap-3">
                 <button onClick={exportData} className="finals-btn finals-btn-ghost">
                     <span className="material-symbols-outlined">download</span> Backup
@@ -103,7 +119,7 @@ function SettingsForm({ baby, onDone }: { baby: Baby | undefined, onDone: () => 
                     <span className="material-symbols-outlined">delete_forever</span> Erase all data
                 </button>
             </div>
-            <p className="text-xs text-[var(--finals-muted)]">Data is stored only on this device. Use Backup to keep a copy.</p>
+            <p className="text-xs text-[var(--finals-muted)]">Data is kept on this phone, and on the BabySync server only if you turn on family sync.</p>
         </div>
     )
 }

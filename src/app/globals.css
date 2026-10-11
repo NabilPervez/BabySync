@@ -160,11 +160,6 @@
   body {
     min-height: 100dvh;
   }
-
-  /* Recharts axis text */
-  .recharts-text {
-    fill: var(--finals-muted);
-  }
 }
 
 @layer components {

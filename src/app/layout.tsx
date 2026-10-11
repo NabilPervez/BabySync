@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { SyncBoot } from "@/components/FamilySync";
 
 export const viewport: Viewport = {
   themeColor: "#0a0a0b",
@@ -36,6 +37,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,500,0..1,0&display=block" rel="stylesheet" />
       </head>
       <body className="antialiased">
+        <SyncBoot />
         {children}
       </body>
     </html>

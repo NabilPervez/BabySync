@@ -47,3 +47,6 @@ next-env.d.ts
 /public/workbox-*.js.map
 *.log
 /.claude/
+
+# local sync store used by next dev
+/.data/

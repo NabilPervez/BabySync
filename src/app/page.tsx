@@ -8,6 +8,7 @@ import { AddActivityDrawer } from "@/components/AddActivityDrawer"
 import { ShareDrawer } from "@/components/ShareDrawer"
 import { BottomNav } from "@/components/BottomNav"
 import { useNow } from "@/components/LiveStateCard"
+import { SyncBadge } from "@/components/FamilySync"
 import { LastActivityStats } from "@/components/LastActivityStats"
 import { db, type Log, type LogType } from "@/lib/db"
 
@@ -35,7 +36,7 @@ export default function Home() {
     <div className="finals-page">
       <header className="finals-header">
         <div className="min-w-0">
-          <p className="finals-label">{format(now, "EEEE, MMM d")}</p>
+          <p className="finals-label flex items-center gap-2">{format(now, "EEEE, MMM d")} <SyncBadge /></p>
           <h1 className="finals-heading text-3xl truncate">
             {baby?.name || "BabySync"}
             {age && <span className="ml-2 text-base text-[var(--finals-muted)]">{age}</span>}

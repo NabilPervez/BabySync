@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useLiveQuery } from "dexie-react-hooks"
 import { db, latestOfType } from "@/lib/db"
+import { addLog, updateLog } from "@/lib/data"
 import { formatMinutes, getSubtype, guessSleepSubtype } from "@/lib/log-types"
 
 export function useNow(intervalMs = 1000) {
@@ -25,10 +26,10 @@ function clock(ms: number) {
 
 async function startActivity(subtype: string) {
     const t = Date.now()
-    await db.logs.add({ type: "ACTIVITY", subtype, startTime: t, createdAt: t })
+    await addLog({ type: "ACTIVITY", subtype, startTime: t, createdAt: t })
 }
 
-const stop = (id: number) => db.logs.update(id, { endTime: Date.now() })
+const stop = (id: number) => updateLog(id, { endTime: Date.now() })
 
 export function LiveStateCard() {
     const now = useNow()
@@ -43,10 +44,10 @@ export function LiveStateCard() {
 
     const toggleSleep = async () => {
         if (isSleeping) {
-            await db.logs.update(lastSleep!.id, { endTime: Date.now() })
+            await updateLog(lastSleep!.id, { endTime: Date.now() })
         } else {
             const t = Date.now()
-            await db.logs.add({ type: "SLEEP", subtype: guessSleepSubtype(t), startTime: t, createdAt: t })
+            await addLog({ type: "SLEEP", subtype: guessSleepSubtype(t), startTime: t, createdAt: t })
         }
     }
 
