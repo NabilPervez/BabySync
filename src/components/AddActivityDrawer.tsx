@@ -183,7 +183,7 @@ function LogForm({ initial, onDone }: { initial?: Partial<Log>, onDone: () => vo
                 {category.timed && !isSleep && (
                     <label className="block">
                         <span className="finals-label">How long (min)</span>
-                        <input type="number" inputMode="numeric" min={0} value={duration} onChange={e => setDuration(e.target.value)} placeholder="30" className="finals-input" />
+                        <input type="number" inputMode="numeric" min={0} value={duration} onChange={e => setDuration(e.target.value)} placeholder="blank = still going" className="finals-input" />
                     </label>
                 )}
                 {unit && (

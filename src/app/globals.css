@@ -328,6 +328,40 @@
     color: var(--tile);
   }
 
+  /* the five everyday buttons on the home card */
+  .finals-quick {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    min-height: 4.5rem;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--finals-text);
+    background: var(--finals-raised);
+    border: 1px solid var(--finals-line);
+    border-bottom: 3px solid var(--tile);
+    border-radius: var(--radius);
+    transition: transform 0.1s, background 0.15s;
+  }
+  .finals-quick .material-symbols-outlined {
+    color: var(--tile);
+  }
+  .finals-quick:active {
+    transform: scale(0.95);
+  }
+  .finals-quick[data-active="true"] {
+    background: var(--tile);
+    color: var(--finals-bg);
+  }
+  .finals-quick[data-active="true"] .material-symbols-outlined {
+    color: var(--finals-bg);
+  }
+
   .finals-chip {
     display: inline-flex;
     align-items: center;

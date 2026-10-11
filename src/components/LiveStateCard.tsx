@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useLiveQuery } from "dexie-react-hooks"
-import { db, latestOfType } from "@/lib/db"
+import { db, latestOfType, type Log, type LogType } from "@/lib/db"
 import { addLog, updateLog } from "@/lib/data"
 import { formatMinutes, getSubtype, guessSleepSubtype } from "@/lib/log-types"
 
@@ -24,14 +24,27 @@ function clock(ms: number) {
     return h ? `${h}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}`
 }
 
-async function startActivity(subtype: string) {
-    const t = Date.now()
-    await addLog({ type: "ACTIVITY", subtype, startTime: t, createdAt: t })
+async function toggleSleep(lastSleep: Log | undefined) {
+    if (lastSleep && !lastSleep.endTime) {
+        await updateLog(lastSleep.id, { endTime: Date.now() })
+    } else {
+        const t = Date.now()
+        await addLog({ type: "SLEEP", subtype: guessSleepSubtype(t), startTime: t, createdAt: t })
+    }
 }
 
 const stop = (id: number) => updateLog(id, { endTime: Date.now() })
 
-export function LiveStateCard() {
+/** The five everyday buttons, in the order parents reach for them. */
+const QUICK: { type: LogType, label: string, icon: string, color: string }[] = [
+    { type: "SLEEP", label: "Sleep", icon: "bedtime", color: "var(--finals-pink)" },
+    { type: "MEDICINE", label: "Meds", icon: "medication", color: "var(--finals-red)" },
+    { type: "FEED", label: "Eat", icon: "restaurant", color: "var(--finals-yellow)" },
+    { type: "DIAPER", label: "Potty", icon: "wc", color: "var(--finals-white)" },
+    { type: "ACTIVITY", label: "Play", icon: "toys", color: "var(--finals-cyan)" },
+]
+
+export function LiveStateCard({ onQuickLog }: { onQuickLog: (type: LogType) => void }) {
     const now = useNow()
     const lastSleep = useLiveQuery(() => latestOfType("SLEEP"))
     // Timed activities (walks, play) that were started but not ended
@@ -42,14 +55,6 @@ export function LiveStateCard() {
     const isSleeping = !!lastSleep && !lastSleep.endTime
     const since = isSleeping ? lastSleep!.startTime : lastSleep?.endTime
 
-    const toggleSleep = async () => {
-        if (isSleeping) {
-            await updateLog(lastSleep!.id, { endTime: Date.now() })
-        } else {
-            const t = Date.now()
-            await addLog({ type: "SLEEP", subtype: guessSleepSubtype(t), startTime: t, createdAt: t })
-        }
-    }
 
     return (
         <section className="finals-card finals-card-accent p-5" style={{ "--tile": isSleeping ? "var(--finals-pink)" : "var(--finals-yellow)" } as React.CSSProperties}>
@@ -65,14 +70,29 @@ export function LiveStateCard() {
                     {isSleeping && now - since! > 14 * 3600_000 && (
                         <p className="text-xs font-semibold text-[var(--finals-yellow)] mt-1">Over 14h — forgot to tap &ldquo;Woke up&rdquo;? Edit it in the timeline.</p>
                     )}
-                    {!since && <p className="text-xs text-[var(--finals-muted)] mt-1">Tap the button when they fall asleep</p>}
+                    {!since && <p className="text-xs text-[var(--finals-muted)] mt-1">Tap Sleep when they fall asleep</p>}
                 </div>
             </div>
 
-            <button onClick={toggleSleep} className="finals-btn finals-btn-primary w-full mt-4 text-lg" style={isSleeping ? { background: "var(--finals-pink)" } : undefined}>
-                <span className="material-symbols-outlined">{isSleeping ? "wb_sunny" : "bedtime"}</span>
-                {isSleeping ? "Woke up" : "Start sleep"}
-            </button>
+            <div className="grid grid-cols-5 gap-1.5 mt-4">
+                {QUICK.map(q => {
+                    const sleepBtn = q.type === "SLEEP"
+                    const label = sleepBtn && isSleeping ? "Woke up" : q.label
+                    return (
+                        <button
+                            key={q.type}
+                            onClick={() => sleepBtn ? toggleSleep(lastSleep) : onQuickLog(q.type)}
+                            className="finals-quick"
+                            style={{ "--tile": q.color } as React.CSSProperties}
+                            data-active={sleepBtn && isSleeping}
+                            aria-label={sleepBtn ? (isSleeping ? "Woke up — end sleep" : "Start sleep now") : `Log ${q.label}`}
+                        >
+                            <span className="material-symbols-outlined text-[26px]">{sleepBtn && isSleeping ? "wb_sunny" : q.icon}</span>
+                            <span>{label}</span>
+                        </button>
+                    )
+                })}
+            </div>
 
             {running && running.length > 0 && (
                 <ul className="mt-4 space-y-2">
@@ -91,20 +111,6 @@ export function LiveStateCard() {
                 </ul>
             )}
 
-            {!isSleeping && (
-                <div className="grid grid-cols-3 gap-2 mt-3">
-                    {[
-                        { sub: "walk", icon: "directions_walk", label: "Walk" },
-                        { sub: "play_inside", icon: "toys", label: "Play" },
-                        { sub: "play_outside", icon: "park", label: "Outside" },
-                    ].map(b => (
-                        <button key={b.sub} onClick={() => startActivity(b.sub)} className="finals-btn finals-btn-ghost text-sm" aria-label={`Start ${b.label} timer`}>
-                            <span className="material-symbols-outlined text-[20px] text-[var(--finals-cyan)]">{b.icon}</span>
-                            {b.label}
-                        </button>
-                    ))}
-                </div>
-            )}
         </section>
     )
 }

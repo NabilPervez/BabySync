@@ -48,7 +48,7 @@ export default function Home() {
       </header>
 
       <main className="finals-main space-y-5">
-        <LiveStateCard />
+        <LiveStateCard onQuickLog={type => openLog({ type })} />
         <LastActivityStats onQuickLog={type => openLog({ type: type as LogType })} />
         <div>
           <h2 className="finals-heading text-xl mb-3">Timeline</h2>
